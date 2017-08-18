@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <link rel="stylesheet" href="wild.min.css"/>
+    <link rel="stylesheet" href="timeline.css"/>
+    <title>Timeline</title>
+    <style>
+        body{
+            background-color: #fff;
+        }
+        .container{
+            width: 1020px;
+            margin: 100px auto;
+        }
+        .timeline-wrap,.timeline-module{
+            height: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="wd-button-group" id="buttons">
+
+            <a class="wd-button wd-button--raised wd-button--primary" data-type="in">放大</a>
+            <a class="wd-button wd-button--raised wd-button--primary" data-type="out">缩小</a>
+        </div>
+        <div class="wd-button-group wd-utils-right" id="buttonsDate">
+            <a class="wd-button wd-button--raised wd-button--primary" data-type="year">年</a>
+            <a class="wd-button wd-button--raised wd-button--primary" data-type="month">月</a>
+            <a class="wd-button wd-button--raised wd-button--primary" data-type="day">日</a>
+            <a class="wd-button wd-button--raised wd-button--primary" data-type="hours">时</a>
+        </div>
+        <div class="timeline-wrap" id="timeLine">
+            <div class="timeline-module" id="timeline-module"></div>
+        </div>
+    </div>
+    <script src="timeline.js"></script>
+    <script>
+        var loaded = function () {
+            var timeLineExe = function () {
+                var timeLine = Timeline.init({renderTo:'timeLine'});
+                var buttons = document.getElementById('buttons').getElementsByTagName('a');
+                for(var i = 0 ; i < buttons.length; i += 1){
+                    buttons[i].addEventListener('click',function () {
+                        switch (this.getAttribute('data-type')){
+                            case 'in':
+                                //timeLine.zoomIn();
+                                break;
+                            case 'out':
+                                //timeLine.zoomOut();
+                                break;
+                        }
+                    },false);
+                }
+            };
+            timeLineExe();
+            var timeLineModule = function () {
+                var buttonsDate = document.getElementById('buttonsDate').getElementsByTagName('a');
+                var timeLineYearOptions = {
+                    axisType:'average',
+                    renderTo:'timeline-module',
+                    section: [2012, 2018],
+                    slider: {
+                        location: ['2013'],
+                    },
+                    axisTicksLineStyle: {
+                        height: 12,
+                        width: 1,
+                        bgColor: '#bfbfbf'
+                    }
+                };
+                var timeLineYear = Timeline.init(timeLineYearOptions);
+                for(var j = 0 ; j < buttonsDate.length; j += 1){
+                    buttonsDate[j].addEventListener('click',function () {
+                        switch (this.getAttribute('data-type')){
+                            case 'year':
+                                timeLineYear.setOption({section: [2012, 2018]});
+                                break;
+                            case 'month':
+                                timeLineYear.setOption({section: [1, 12]});
+                                break;
+                            case 'day':
+                                timeLineYear.setOption({section: [1, 31]});
+                                break;
+                            case 'hours':
+                                timeLineYear.setOption({section: [0, 24],slider: {
+                                    location: ['13','18'],
+                                },});
+                                break;
+                        }
+                    },false);
+                }
+            };
+            //timeLineModule();
+
+        };
+        document.addEventListener('DOMContentLoaded',loaded);
+    </script>
+</body>
+</html>
