@@ -171,21 +171,23 @@
             return sliderTemplate;
         },
         _slidersAreaExecute: function () {
-            this.axis.slidersArea = this._slidersArea();
-            Timeline.Drag(this.axis.slidersArea, {
-                start: function (that) {
-                    if(this.axis.slidersMirror[0].offsetLeft > this.axis.slidersMirror[1].offsetLeft){
-                        this.axis.slidersMirror = this._sliderArrChange(this.axis.sliders);
-                    }
-                    that.slidersTips = this._sliderScanTips(this.axis.slidersMirror, []).shift();
-                    that.slidersTipsRight = this._sliderScanTips(this.axis.slidersMirror, []).pop();
-                    that.previous.pointX = that.element.offsetLeft;
-                    this.axis.slidersAreaCalculationWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
-                }.bind(this),
-                limit: function (moveX, that) {
-                    return this._sliderCommonLimitJudge(moveX, that, this._slidersAreaJudgeCallback);
-                }.bind(this)
-            });
+            if(this.options.slidersArea.show && this.options.slider.location.length > 1){
+                this.axis.slidersArea = this._slidersArea();
+                Timeline.Drag(this.axis.slidersArea, {
+                    start: function (that) {
+                        if(this.axis.slidersMirror[0].offsetLeft > this.axis.slidersMirror[1].offsetLeft){
+                            this.axis.slidersMirror = this._sliderArrChange(this.axis.sliders);
+                        }
+                        that.slidersTips = this._sliderScanTips(this.axis.slidersMirror, []).shift();
+                        that.slidersTipsRight = this._sliderScanTips(this.axis.slidersMirror, []).pop();
+                        that.previous.pointX = that.element.offsetLeft;
+                        this.axis.slidersAreaCalculationWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
+                    }.bind(this),
+                    limit: function (moveX, that) {
+                        return this._sliderCommonLimitJudge(moveX, that, this._slidersAreaJudgeCallback);
+                    }.bind(this)
+                });
+            }
         },
         _slidersAreaJudgeCallback: function (moveX, that) {
             var distance = 0;
@@ -270,10 +272,12 @@
                 Timeline.Drag(this.axis.sliders[i], {
                     start: function (that) {
                         that.slidersTips = this._sliderScanTips(that.element.childNodes, []).shift();
-                        that.previous.pointX = this._sliderScanParent(that.slidersTips).offsetLeft;
-                        that.slidersAreaCalculationWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
-                        that.slidersAreaLeft  = this.axis.slidersArea.offsetLeft;
-                        that.slidersAreaRight = that.slidersAreaCalculationWidth + that.slidersAreaLeft;
+                        that.previous.pointX = this._sliderScanParent(that.slidersTips,[]).shift().offsetLeft;
+                        if(this.axis.slidersArea!== null){
+                            that.slidersAreaCalculationWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
+                            that.slidersAreaLeft  = this.axis.slidersArea.offsetLeft;
+                            that.slidersAreaRight = that.slidersAreaCalculationWidth + that.slidersAreaLeft;
+                        }
                         this.axis.slidersAreaCalculationWidth = 0;
                     }.bind(this),
                     limit: function (moveX, that) {
@@ -336,13 +340,13 @@
             }
             return textArray;
         },
-        _sliderScanParent: function (node) {
+        _sliderScanParent: function (node,nodes) {
             if (node.parentNode != this.axis.element) {
-                this._sliderScanParent(node.parentNode);
+                this._sliderScanParent(node.parentNode,nodes);
             } else {
-                return node.parentNode;
+                nodes.push(node);
             }
-            return node.parentNode;
+            return nodes;
         },
         _sliderToArr: function (nodes) {
             var nodesArr = [];
