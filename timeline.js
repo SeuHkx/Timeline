@@ -100,12 +100,18 @@
         };
         this.dataTime = [];
         this.setOption = function (option) {
-            this.axis.renderTo.removeChild(this.axis.element);
+            if(this.options.axisType !== option.axisType && typeof option.axisType !== 'undefined'){
+                console.warn('axisType type must be the same');
+                return false;
+            }
+            try {
+                this.axis.renderTo.removeChild(this.axis.element);
+            } catch (e) {
+                console.warn('renderTo is error or renderTo is null')
+            }
             Timeline.extends(this.options, option);
             if (this.options.axisType === 'order') {
-                this.axis.width = this._axisTemplateWidth();
-                this.axis.element = Timeline.parseDom(this._axisTemplate(this.axis.width, true))[0];
-                this._render();
+                this._renderTypeOrder();
             } else {
                 this._renderTypeAverage();
             }
@@ -123,10 +129,21 @@
             this._slider();
         },
         _axisUpdateTypeAverageOptions: function () {
-            var renderToWidth = parseInt(getComputedStyle(this.axis.renderTo)['width']);
+            try {
+                var renderToWidth = parseInt(getComputedStyle(this.axis.renderTo)['width']);
+            } catch (e) {
+                console.warn('renderTo is error or renderTo is null')
+            }
             var section = this.options.section[this.options.section.length - 1] - this.options.section[0] + 1;
             this.options.axisTicks.width = this.options.axisItemWidth = renderToWidth / section;
             this.axis.element = Timeline.parseDom(this._axisTemplate(renderToWidth, false))[0];
+        },
+        _renderTypeOrder:function () {
+            this.axis.recordPoint = [];
+            this.axis.recordData  = {};
+            this.axis.width   = this._axisTemplateWidth();
+            this.axis.element = Timeline.parseDom(this._axisTemplate(this.axis.width, true))[0];
+            this._render();
         },
         _render: function () {
             var styles = {
@@ -136,6 +153,9 @@
             };
             this._renderToStyle(styles);
             if (this.options.slider.show) this._slider();
+            this._axisDragInit();
+        },
+        _axisDragInit:function () {
             Timeline.Drag(this.axis.element, {
                 limit: function (moveX) {
                     var tolerance;
@@ -235,18 +255,29 @@
         },
         _slidersAreaStyle: function (sliderArea) {
             var positionTop = -this.options.slidersArea.height / 2;
-            var axisRecords = this._axisRecord();
+            var axisRecord = this._axisRecord();
             if (this.options.slidersArea.position === 'bottom') {
                 positionTop = 0;
             }
             if (this.options.slider.location.length > 1) {
-                this.axis.slidersAreaCalculationWidth = axisRecords[this.options.slider.location[1]] - axisRecords[this.options.slider.location[0]];
+                for(var i = 0; i < this.options.slider.location.length; i += 1){
+                    if((this.options.slider.location.length - 1) - i > 0){
+                        var lastIndex = this.options.slider.location.length - 1;
+                        if(typeof axisRecord[this.options.slider.location[i]] === 'undefined'){
+                            axisRecord[this.options.slider.location[i]] = axisRecord[this.options.section[0]];
+                        }
+                        if(typeof axisRecord[this.options.slider.location[lastIndex]] === 'undefined'){
+                            axisRecord[this.options.slider.location[lastIndex]] = axisRecord[this.options.section[1]];
+                        }
+                        this.axis.slidersAreaCalculationWidth = axisRecord[this.options.slider.location[lastIndex]] - axisRecord[this.options.slider.location[i]];
+                    }
+                }
             }
             var styles = {
                 position: 'absolute',
                 top: positionTop + 'px',
                 width: this.axis.slidersAreaCalculationWidth + 'px',
-                left: axisRecords[this.options.slider.location[0]] + 'px',
+                left: axisRecord[this.options.slider.location[0]] + 'px',
                 right: 0,
                 background: this.options.slidersArea.bgColor,
                 height: this.options.slidersArea.height + 'px'
@@ -265,6 +296,10 @@
         _sliderPositionInitDrag : function () {
             var axisRecord = this._axisRecord();
             for (var i = 0; i < this.axis.sliders.length; i += 1) {
+                if(typeof axisRecord[this.options.slider.location[i]] === 'undefined'){
+                    axisRecord[this.options.slider.location[i]] = axisRecord[this.options.section[i]];
+                    console.warn('location is overflow');
+                }
                 this.axis.sliders[i]['style']['left'] = axisRecord[this.options.slider.location[i]] + 'px';
                 this.axis.sliders[i]['style']['width'] = this.options.slider.width + 'px';
                 this.axis.element.appendChild(this.axis.sliders[i]);
