@@ -75,7 +75,7 @@
             sliders: null,
             width:this._axisTemplateWidth(),
             slidersArea:null,
-            slidersAreaWidth:0,
+            slidersAreaCalculationWidth:0,
             recordPoint: [],
             recordData: {}
         };
@@ -170,7 +170,7 @@
             Timeline.Drag(this.axis.slidersArea, {
                 start: function (that) {
                     that.previous.pointX  = that.element.offsetLeft;
-                    this.axis.slidersAreaWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
+                    this.axis.slidersAreaCalculationWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
                 }.bind(this),
                 limit: function (moveX, that) {
                     return this._sliderCommonLimitJudge(moveX,that,this._slidersAreaJudgeCallback);
@@ -192,7 +192,7 @@
         },
         _sliderCommonLimitJudge:function (moveX,that,callback) {
             var limitLeft  = this.options.axisTicks.width / 2;
-            var limitRight = this.axis.width - this.options.axisTicks.width / 2 - this.axis.slidersAreaWidth;
+            var limitRight = this.axis.width - this.options.axisTicks.width / 2 - this.axis.slidersAreaCalculationWidth;
             moveX = moveX < limitLeft  ? limitLeft  : moveX;
             moveX = moveX > limitRight ? limitRight : moveX;
             callback.call(this,moveX,that);
@@ -211,12 +211,12 @@
                 positionTop = 0;
             }
             if (this.options.slider.location.length > 1) {
-                this.axis.slidersAreaWidth = axisRecords[this.options.slider.location[1]] - axisRecords[this.options.slider.location[0]];
+                this.axis.slidersAreaCalculationWidth = axisRecords[this.options.slider.location[1]] - axisRecords[this.options.slider.location[0]];
             }
             var styles = {
                 position: 'absolute',
                 top: positionTop + 'px',
-                width: this.axis.slidersAreaWidth + 'px',
+                width: this.axis.slidersAreaCalculationWidth + 'px',
                 left: axisRecords[this.options.slider.location[0]] + 'px',
                 right: 0,
                 background: this.options.slidersArea.bgColor,
@@ -229,7 +229,6 @@
         _slider: function () {
             this.axis.sliders = this._sliderToArr(Timeline.parseDom(this._sliderCompileTemplate()));
             var axisRecord = this._axisRecord();
-            var pointArr = Timeline.jointArrayGroup(this.axis.recordPoint);
             if (this.options.slidersArea.show) {
                 this._slidersAreaExecute();
             }
@@ -243,32 +242,44 @@
                     start: function (that) {
                         that.slidersTips      = this._sliderScanTips(that.element.childNodes, []).pop();
                         that.previous.pointX  = this._sliderScanParent(that.slidersTips).offsetLeft;
-                        that.slidersAreaWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
-                        this.axis.slidersAreaWidth = 0;
+                        that.slidersAreaCalculationWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
+                        that.slidersAreaLeft  = this.axis.slidersArea.offsetLeft;
+                        that.slidersAreaRight = that.slidersAreaCalculationWidth + that.slidersAreaLeft;
+                        this.axis.slidersAreaCalculationWidth = 0;
                     }.bind(this),
                     limit: function (moveX, that) {
                         return this._sliderCommonLimitJudge(moveX,that,this._sliderJudgeCallback);
                     }.bind(this)
                 });
-
-                // this.axis.slidersArea.style.width = that.slidersAreaWidth + that.previous.pointX - moveX + 'px';
-                // this.axis.slidersArea.style.left  = moveX + 'px';
-                //
-                // for (var ii = 0; ii < pointArr.length; ii += 1) {
-                //     if (pointArr[ii][0] < moveX && moveX <= pointArr[ii][1]) {
-                //         var pointValue = this.axis.recordData[pointArr[ii][0]];
-                //         that.slidersTips.innerHTML = pointValue;
-                //         this.drag(pointValue);
-                //     }
-                // }
             }
         },
         _sliderJudgeCallback:function (moveX,that) {
-
-            this.axis.slidersArea.style.width = that.slidersAreaWidth + moveX - that.previous.pointX + 'px';
-
-            // this.axis.slidersArea.style.width = that.slidersAreaWidth + that.previous.pointX - moveX + 'px';
-            // this.axis.slidersArea.style.left  = moveX + 'px';
+            if(that.slidersAreaLeft === that.previous.pointX){
+                if(moveX > that.slidersAreaRight){
+                    this.axis.slidersArea.style.left  = that.slidersAreaRight + 'px';
+                    this.axis.slidersArea.style.width = moveX - that.slidersAreaRight + 'px';
+                }else{
+                    this.axis.slidersArea.style.width = that.slidersAreaCalculationWidth + that.previous.pointX - moveX + 'px';
+                    this.axis.slidersArea.style.left  = moveX + 'px';
+                }
+            }
+            if(that.slidersAreaRight === that.previous.pointX){
+                if(moveX < that.slidersAreaLeft){
+                    this.axis.slidersArea.style.width = that.slidersAreaLeft - moveX + 'px';
+                    this.axis.slidersArea.style.left  = moveX + 'px';
+                }else{
+                    this.axis.slidersArea.style.width = that.slidersAreaCalculationWidth + moveX - that.previous.pointX + 'px';
+                    this.axis.slidersArea.style.left  = that.slidersAreaLeft + 'px';
+                }
+            }
+            // var pointArr = Timeline.jointArrayGroup(this.axis.recordPoint);
+            // for (var ii = 0; ii < pointArr.length; ii += 1) {
+            //     if (pointArr[ii][0] < moveX && moveX <= pointArr[ii][1]) {
+            //         var pointValue = this.axis.recordData[pointArr[ii][0]];
+            //         that.slidersTips.innerHTML = pointValue;
+            //         this.drag(pointValue);
+            //     }
+            // }
         },
         _sliderScanTips: function (nodes, textArray) {
             for (var i = 0; i < nodes.length; i += 1) {
