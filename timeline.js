@@ -95,6 +95,10 @@
         };
         this.drag = function () {
         };
+        this.dragArea = function () {
+
+        };
+        this.dataTime = [];
         this.setOption = function (option) {
             this.axis.renderTo.removeChild(this.axis.element);
             Timeline.extends(this.options, option);
@@ -173,6 +177,8 @@
                     if(this.axis.slidersMirror[0].offsetLeft > this.axis.slidersMirror[1].offsetLeft){
                         this.axis.slidersMirror = this._sliderArrChange(this.axis.sliders);
                     }
+                    that.slidersTips = this._sliderScanTips(this.axis.slidersMirror, []).shift();
+                    that.slidersTipsRight = this._sliderScanTips(this.axis.slidersMirror, []).pop();
                     that.previous.pointX = that.element.offsetLeft;
                     this.axis.slidersAreaCalculationWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
                 }.bind(this),
@@ -186,18 +192,30 @@
             if (that.previous.pointX < moveX) {
                 distance = moveX - that.previous.pointX;
                 this.axis.slidersMirror[1].style.left = parseInt(getComputedStyle(this.axis.slidersMirror[1])['left']) + distance + 'px';
+                this._slidersAreaJudgeData(parseInt(getComputedStyle(this.axis.slidersMirror[1])['left']),that);
             }
             if (that.previous.pointX > moveX) {
                 distance = that.previous.pointX - moveX;
                 this.axis.slidersMirror[1].style.left = parseInt(getComputedStyle(this.axis.slidersMirror[1])['left']) - distance + 'px';
+                this._slidersAreaJudgeData(parseInt(getComputedStyle(this.axis.slidersMirror[1])['left']),that);
             }
             that.previous.pointX = moveX;
             this.axis.slidersMirror[0].style.left = moveX + 'px';
             //todo data
-            this._slidersAreaJudgeData();
+            this._sliderJudgeData(moveX,that);
         },
-        _slidersAreaJudgeData : function () {
-
+        _slidersAreaJudgeData : function (moveX,that) {
+            var dataTime = [];
+            var pointArr = Timeline.jointArrayGroup(this.axis.recordPoint);
+            for (var ii = 0; ii < pointArr.length; ii += 1) {
+                if (pointArr[ii][0] < moveX && moveX <= pointArr[ii][1]) {
+                    var pointValue = this.axis.recordData[pointArr[ii][0]];
+                    that.slidersTipsRight.innerHTML = pointValue;
+                    this.dragArea(pointValue);
+                    dataTime.push(pointValue);
+                }
+            }
+            this.dataTime[1] = dataTime.pop();
         },
         _sliderCommonLimitJudge: function (moveX, that, callback) {
             var limitLeft = this.options.axisTicks.width / 2;
@@ -251,7 +269,7 @@
                 //drag
                 Timeline.Drag(this.axis.sliders[i], {
                     start: function (that) {
-                        that.slidersTips = this._sliderScanTips(that.element.childNodes, []).pop();
+                        that.slidersTips = this._sliderScanTips(that.element.childNodes, []).shift();
                         that.previous.pointX = this._sliderScanParent(that.slidersTips).offsetLeft;
                         that.slidersAreaCalculationWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
                         that.slidersAreaLeft  = this.axis.slidersArea.offsetLeft;
@@ -287,14 +305,17 @@
             this._sliderJudgeData(moveX,that);
         },
         _sliderJudgeData:function (moveX,that) {
+            var dataTime = [];
             var pointArr = Timeline.jointArrayGroup(this.axis.recordPoint);
             for (var ii = 0; ii < pointArr.length; ii += 1) {
                 if (pointArr[ii][0] < moveX && moveX <= pointArr[ii][1]) {
                     var pointValue = this.axis.recordData[pointArr[ii][0]];
                     that.slidersTips.innerHTML = pointValue;
                     this.drag(pointValue);
+                    dataTime.push(pointValue);
                 }
             }
+            this.dataTime[0] = dataTime.pop();
         },
         _sliderArrChange: function (array) {
             var arr = [];
