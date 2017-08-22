@@ -73,9 +73,10 @@
             renderTo: doc.getElementById(this.options.renderTo),
             element: null,
             sliders: null,
-            width:this._axisTemplateWidth(),
-            slidersArea:null,
-            slidersAreaCalculationWidth:0,
+            slidersMirror:null,
+            width: this._axisTemplateWidth(),
+            slidersArea: null,
+            slidersAreaCalculationWidth: 0,
             recordPoint: [],
             recordData: {}
         };
@@ -98,7 +99,7 @@
             this.axis.renderTo.removeChild(this.axis.element);
             Timeline.extends(this.options, option);
             if (this.options.axisType === 'order') {
-                this.axis.width   = this._axisTemplateWidth();
+                this.axis.width = this._axisTemplateWidth();
                 this.axis.element = Timeline.parseDom(this._axisTemplate(this.axis.width, true))[0];
                 this._render();
             } else {
@@ -166,36 +167,44 @@
             return sliderTemplate;
         },
         _slidersAreaExecute: function () {
-            this.axis.slidersArea  = this._slidersArea();
+            this.axis.slidersArea = this._slidersArea();
             Timeline.Drag(this.axis.slidersArea, {
                 start: function (that) {
-                    that.previous.pointX  = that.element.offsetLeft;
+                    if(this.axis.slidersMirror[0].offsetLeft > this.axis.slidersMirror[1].offsetLeft){
+                        this.axis.slidersMirror = this._sliderArrChange(this.axis.sliders);
+                    }
+                    that.previous.pointX = that.element.offsetLeft;
                     this.axis.slidersAreaCalculationWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
                 }.bind(this),
                 limit: function (moveX, that) {
-                    return this._sliderCommonLimitJudge(moveX,that,this._slidersAreaJudgeCallback);
+                    return this._sliderCommonLimitJudge(moveX, that, this._slidersAreaJudgeCallback);
                 }.bind(this)
             });
         },
-        _slidersAreaJudgeCallback:function (moveX,that) {
+        _slidersAreaJudgeCallback: function (moveX, that) {
             var distance = 0;
-            if(that.previous.pointX < moveX){
+            if (that.previous.pointX < moveX) {
                 distance = moveX - that.previous.pointX;
-                this.axis.sliders[1].style.left = parseInt(getComputedStyle(this.axis.sliders[1])['left']) + distance + 'px';
+                this.axis.slidersMirror[1].style.left = parseInt(getComputedStyle(this.axis.slidersMirror[1])['left']) + distance + 'px';
             }
-            if(that.previous.pointX > moveX){
+            if (that.previous.pointX > moveX) {
                 distance = that.previous.pointX - moveX;
-                this.axis.sliders[1].style.left = parseInt(getComputedStyle(this.axis.sliders[1])['left']) - distance + 'px';
+                this.axis.slidersMirror[1].style.left = parseInt(getComputedStyle(this.axis.slidersMirror[1])['left']) - distance + 'px';
             }
-            that.previous.pointX  = moveX;
-            this.axis.sliders[0].style.left = moveX + 'px';
+            that.previous.pointX = moveX;
+            this.axis.slidersMirror[0].style.left = moveX + 'px';
+            //todo data
+            this._slidersAreaJudgeData();
         },
-        _sliderCommonLimitJudge:function (moveX,that,callback) {
-            var limitLeft  = this.options.axisTicks.width / 2;
+        _slidersAreaJudgeData : function () {
+
+        },
+        _sliderCommonLimitJudge: function (moveX, that, callback) {
+            var limitLeft = this.options.axisTicks.width / 2;
             var limitRight = this.axis.width - this.options.axisTicks.width / 2 - this.axis.slidersAreaCalculationWidth;
             moveX = moveX < limitLeft  ? limitLeft  : moveX;
             moveX = moveX > limitRight ? limitRight : moveX;
-            callback.call(this,moveX,that);
+            callback.call(this, moveX, that);
             return moveX;
         },
         _slidersArea: function () {
@@ -227,12 +236,14 @@
             }
         },
         _slider: function () {
-            this.axis.sliders = this._sliderToArr(Timeline.parseDom(this._sliderCompileTemplate()));
-            var axisRecord = this._axisRecord();
+            this.axis.slidersMirror = this.axis.sliders = this._sliderToArr(Timeline.parseDom(this._sliderCompileTemplate()));
             if (this.options.slidersArea.show) {
                 this._slidersAreaExecute();
             }
-
+            this._sliderPositionInitDrag();
+        },
+        _sliderPositionInitDrag : function () {
+            var axisRecord = this._axisRecord();
             for (var i = 0; i < this.axis.sliders.length; i += 1) {
                 this.axis.sliders[i]['style']['left'] = axisRecord[this.options.slider.location[i]] + 'px';
                 this.axis.sliders[i]['style']['width'] = this.options.slider.width + 'px';
@@ -240,46 +251,59 @@
                 //drag
                 Timeline.Drag(this.axis.sliders[i], {
                     start: function (that) {
-                        that.slidersTips      = this._sliderScanTips(that.element.childNodes, []).pop();
-                        that.previous.pointX  = this._sliderScanParent(that.slidersTips).offsetLeft;
+                        that.slidersTips = this._sliderScanTips(that.element.childNodes, []).pop();
+                        that.previous.pointX = this._sliderScanParent(that.slidersTips).offsetLeft;
                         that.slidersAreaCalculationWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
                         that.slidersAreaLeft  = this.axis.slidersArea.offsetLeft;
                         that.slidersAreaRight = that.slidersAreaCalculationWidth + that.slidersAreaLeft;
                         this.axis.slidersAreaCalculationWidth = 0;
                     }.bind(this),
                     limit: function (moveX, that) {
-                        return this._sliderCommonLimitJudge(moveX,that,this._sliderJudgeCallback);
+                        return this._sliderCommonLimitJudge(moveX, that, this._sliderJudgeCallback);
                     }.bind(this)
                 });
             }
         },
-        _sliderJudgeCallback:function (moveX,that) {
-            if(that.slidersAreaLeft === that.previous.pointX){
-                if(moveX > that.slidersAreaRight){
-                    this.axis.slidersArea.style.left  = that.slidersAreaRight + 'px';
+        _sliderJudgeCallback: function (moveX, that) {
+            if (that.slidersAreaLeft === that.previous.pointX) {
+                if (moveX > that.slidersAreaRight) {
+                    this.axis.slidersArea.style.left = that.slidersAreaRight + 'px';
                     this.axis.slidersArea.style.width = moveX - that.slidersAreaRight + 'px';
-                }else{
+                } else {
                     this.axis.slidersArea.style.width = that.slidersAreaCalculationWidth + that.previous.pointX - moveX + 'px';
-                    this.axis.slidersArea.style.left  = moveX + 'px';
+                    this.axis.slidersArea.style.left = moveX + 'px';
                 }
             }
-            if(that.slidersAreaRight === that.previous.pointX){
-                if(moveX < that.slidersAreaLeft){
+            if (that.slidersAreaRight === that.previous.pointX) {
+                if (moveX < that.slidersAreaLeft) {
                     this.axis.slidersArea.style.width = that.slidersAreaLeft - moveX + 'px';
-                    this.axis.slidersArea.style.left  = moveX + 'px';
-                }else{
+                    this.axis.slidersArea.style.left = moveX + 'px';
+                } else {
                     this.axis.slidersArea.style.width = that.slidersAreaCalculationWidth + moveX - that.previous.pointX + 'px';
-                    this.axis.slidersArea.style.left  = that.slidersAreaLeft + 'px';
+                    this.axis.slidersArea.style.left = that.slidersAreaLeft + 'px';
                 }
             }
-            // var pointArr = Timeline.jointArrayGroup(this.axis.recordPoint);
-            // for (var ii = 0; ii < pointArr.length; ii += 1) {
-            //     if (pointArr[ii][0] < moveX && moveX <= pointArr[ii][1]) {
-            //         var pointValue = this.axis.recordData[pointArr[ii][0]];
-            //         that.slidersTips.innerHTML = pointValue;
-            //         this.drag(pointValue);
-            //     }
-            // }
+            //todo data
+            this._sliderJudgeData(moveX,that);
+        },
+        _sliderJudgeData:function (moveX,that) {
+            var pointArr = Timeline.jointArrayGroup(this.axis.recordPoint);
+            for (var ii = 0; ii < pointArr.length; ii += 1) {
+                if (pointArr[ii][0] < moveX && moveX <= pointArr[ii][1]) {
+                    var pointValue = this.axis.recordData[pointArr[ii][0]];
+                    that.slidersTips.innerHTML = pointValue;
+                    this.drag(pointValue);
+                }
+            }
+        },
+        _sliderArrChange: function (array) {
+            var arr = [];
+            var first = array.shift();
+            array.push(first);
+            for(var i = 0 ; i < array.length; i += 1){
+                arr[i] = array[i];
+            }
+            return arr;
         },
         _sliderScanTips: function (nodes, textArray) {
             for (var i = 0; i < nodes.length; i += 1) {
@@ -653,12 +677,12 @@
             }
         },
         _dragEndExecute: function (event) {
-            var event = event || window.event;
+            event.cancelBubble = true;
+            event.stopPropagation();
             var moveX = event.clientX - this.elements.pointX;
             this.elements.flag = false;
             this.elements.element.releaseCapture && this.elements.element.releaseCapture();
             this.elements.previous.pointX = moveX;
-            if (this.options.end !== null && typeof this.options.end === 'function') this.options.end(this.elements);
         }
     };
     Timeline.generateStyle = function (styles) {

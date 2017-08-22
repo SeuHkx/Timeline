@@ -49,6 +49,9 @@
                     location: ['2012-02', '2012-08']
                 }
             });
+            timeLine.drag = function (data) {
+                console.log(data)
+            };
             var buttons = document.getElementById('buttons').getElementsByTagName('a');
             for (var i = 0; i < buttons.length; i += 1) {
                 buttons[i].addEventListener('click', function () {
