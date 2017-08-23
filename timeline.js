@@ -49,7 +49,7 @@
                 color: '#fff'
             },
             axisTicks: {
-                width: 100,
+                width: 60,
                 fontSize: 14,
                 color: '#bfbfbf',
             },
@@ -58,17 +58,17 @@
                 width: 1,
                 bgColor: '#bfbfbf'
             },
-            axisItemWidth: 640,
+            axisItemWidth: 700,
             axisItemTicksStyle: {
                 fontSize: 12,
                 height: 16,
                 width: 1,
                 bgColor: '#cfcfcf',
                 color: '#cfcfcf'
-            },
-            axisItemTicksWidth: null
+            }
         };
         Timeline.extends(this.options, options);
+        this._axisItemTicksWidth = (this.options.axisItemWidth - this.options.axisTicks.width)/12;
         this.axis = {
             renderTo: doc.getElementById(this.options.renderTo),
             element: null,
@@ -80,6 +80,7 @@
             recordPoint: [],
             recordData: {}
         };
+        this.axisRecord = this._axisRecord();
         if (this.options.axisType === 'order') {
             this.axis.element = Timeline.parseDom(this._axisTemplate(this.axis.width, true))[0];
             this._render();
@@ -255,7 +256,7 @@
         },
         _slidersAreaStyle: function (sliderArea) {
             var positionTop = -this.options.slidersArea.height / 2;
-            var axisRecord = this._axisRecord();
+            //var axisRecord = this._axisRecord();
             if (this.options.slidersArea.position === 'bottom') {
                 positionTop = 0;
             }
@@ -263,13 +264,14 @@
                 for(var i = 0; i < this.options.slider.location.length; i += 1){
                     if((this.options.slider.location.length - 1) - i > 0){
                         var lastIndex = this.options.slider.location.length - 1;
-                        if(typeof axisRecord[this.options.slider.location[i]] === 'undefined'){
-                            axisRecord[this.options.slider.location[i]] = axisRecord[this.options.section[0]];
+                        if(typeof this.axisRecord[this.options.slider.location[i]] === 'undefined'){
+                            this.axisRecord[this.options.slider.location[i]] = this.axisRecord[this.options.section[0]];
                         }
-                        if(typeof axisRecord[this.options.slider.location[lastIndex]] === 'undefined'){
-                            axisRecord[this.options.slider.location[lastIndex]] = axisRecord[this.options.section[1]];
+                        if(typeof this.axisRecord[this.options.slider.location[lastIndex]] === 'undefined'){
+                            this.axisRecord[this.options.slider.location[lastIndex]] = this.axisRecord[this.options.section[1]];
                         }
-                        this.axis.slidersAreaCalculationWidth = axisRecord[this.options.slider.location[lastIndex]] - axisRecord[this.options.slider.location[i]];
+                        //console.log(this.options.slider.location[lastIndex],this.options.slider.location[i])
+                        this.axis.slidersAreaCalculationWidth = this.axisRecord[this.options.slider.location[lastIndex]] - this.axisRecord[this.options.slider.location[i]];
                     }
                 }
             }
@@ -277,7 +279,7 @@
                 position: 'absolute',
                 top: positionTop + 'px',
                 width: this.axis.slidersAreaCalculationWidth + 'px',
-                left: axisRecord[this.options.slider.location[0]] + 'px',
+                left: this.axisRecord[this.options.slider.location[0]] + 'px',
                 right: 0,
                 background: this.options.slidersArea.bgColor,
                 height: this.options.slidersArea.height + 'px'
@@ -294,16 +296,16 @@
             this._sliderPositionInitDrag();
         },
         _sliderPositionInitDrag : function () {
-            var axisRecord = this._axisRecord();
+            //var axisRecord = this._axisRecord();
             for (var i = 0; i < this.axis.sliders.length; i += 1) {
-                if(typeof axisRecord[this.options.slider.location[i]] === 'undefined'){
-                    axisRecord[this.options.slider.location[i]] = axisRecord[this.options.section[i]];
+                if(typeof this.axisRecord[this.options.slider.location[i]] === 'undefined'){
+                    this.axisRecord[this.options.slider.location[i]] = this.axisRecord[this.options.section[i]];
                     console.warn('location is overflow');
                 }
-                this.axis.sliders[i]['style']['left'] = axisRecord[this.options.slider.location[i]] + 'px';
+                this.axis.sliders[i]['style']['left'] = this.axisRecord[this.options.slider.location[i]] + 'px';
                 this.axis.sliders[i]['style']['width'] = this.options.slider.width + 'px';
                 this.axis.element.appendChild(this.axis.sliders[i]);
-                //drag
+                //todo drag end
                 Timeline.Drag(this.axis.sliders[i], {
                     start: function (that) {
                         that.slidersTips = this._sliderScanTips(that.element.childNodes, []).shift();
@@ -345,13 +347,14 @@
         },
         _sliderJudgeData:function (moveX,that) {
             var dataTime = [];
-            var pointArr = Timeline.jointArrayGroup(this.axis.recordPoint);
-            for (var ii = 0; ii < pointArr.length; ii += 1) {
-                if (pointArr[ii][0] < moveX && moveX <= pointArr[ii][1]) {
-                    var pointValue = this.axis.recordData[pointArr[ii][0]];
+            var pointGroup = Timeline.jointArrayGroup(this.axis.recordPoint);
+            for (var ii = 0; ii < pointGroup.length; ii += 1) {
+                if (pointGroup[ii][0] < moveX && moveX < pointGroup[ii][1]) {
+                    var pointValue = this.axis.recordData[pointGroup[ii][0]];
                     that.slidersTips.innerHTML = pointValue;
                     this.drag(pointValue);
                     dataTime.push(pointValue);
+
                 }
             }
             this.dataTime[0] = dataTime.pop();
@@ -525,9 +528,8 @@
         _axisItemTicksPosition: function () {
             var MONTH = 12;
             var positions = [];
-            this.options.axisItemTicksWidth = (this.options.axisItemWidth - this.options.axisTicks.width) / MONTH;
             while (MONTH-- > 0) {
-                positions.push(MONTH * this.options.axisItemTicksWidth);
+                positions.push(MONTH * this._axisItemTicksWidth);
             }
             return positions.reverse();
         },
@@ -584,8 +586,8 @@
         },
         _axisMonthOrder: function () {
             var month = [];
-            var MONTH = 12;
-            for (var i = 1; i <= MONTH; i += 1) {
+            var MONTH_NUMBER = 12;
+            for (var i = 1; i <= MONTH_NUMBER; i += 1) {
                 var ii = i.toString();
                 if (ii.length === 1) {
                     ii = '0' + ii;
@@ -596,66 +598,96 @@
         },
         _axisDayOrder: function () {
             var axisSectionOrder = this._axisSectionOrder();
-            var MONTH = 12;
-            //todo
-            var axisDayOrder = {};
+            var MONTH_NUMBER = 12;
+            var axisDayOrder = [];
             for (var i = 0; i < axisSectionOrder.length; i += 1) {
-                axisDayOrder[axisSectionOrder[i]] = [];
-                for (var ii = 1; ii <= MONTH; ii += 1) {
-                    var day = new Date(axisSectionOrder[i], ii, 0);
-                    axisDayOrder[axisSectionOrder[i]].push(day.getDate());
+                var days = [];
+                if(i !== (axisSectionOrder.length - 1)){
+                    for (var ii = 1; ii <= MONTH_NUMBER; ii += 1) {
+                        var day = new Date(axisSectionOrder[i], ii, 0);
+                        days.push(day.getDate());
+                    }
+                    axisDayOrder.push(days);
                 }
             }
             return axisDayOrder;
         },
         _axisRecord: function () {
+            //year
             var sections = this._axisSectionOrder();
-            var sectionsPoint = this._axisSectionPoint();
+            var sectionsPoint = this._axisSectionPoint(sections);
+            //month
             var month = this._axisMonthOrder();
-            var monthPoint = this._axisMonthPoint();
+            var monthPoint = this._axisMonthPoint(sections,month);
+            //day
+            var day = this._axisDayOrder();
+            var dayPoint = this._axisDayPoint(monthPoint,day);
             //todo
             var axisRecord = {};
             for (var i = 0, l = sections.length; i < l; i += 1) {
                 axisRecord[sections[i]] = sectionsPoint[i];
                 this.axis.recordData[sectionsPoint[i]] = sections[i];
                 this.axis.recordPoint.push(sectionsPoint[i]);
+                //year
                 if (i !== (sections.length - 1)) {
                     for (var m = 0; m < month.length; m += 1) {
-                        axisRecord[sections[i] + '-' + month[m]] = monthPoint[sections[i]][m];
-                        this.axis.recordData[Math.ceil(monthPoint[sections[i]][m])] = sections[i] + '-' + month[m];
-                        this.axis.recordPoint.push(Math.ceil(monthPoint[sections[i]][m]));
+                        //month
+                        axisRecord[sections[i] + '-' + month[m]] = monthPoint[i][m];
+                        this.axis.recordData[Math.ceil(monthPoint[i][m])] = sections[i] + '-' + month[m];
+                        this.axis.recordPoint.push(Math.ceil(monthPoint[i][m]));
+                        //day
+                        var days = day[i][m];
+                        for(var d = 0; d < days; d += 1){
+                            this.axis.recordData[dayPoint[i][m][d]] = sections[i] + '-' + month[m] + '-' + (d+1);
+                            this.axis.recordPoint.push(dayPoint[i][m][d]);
+                        }
                     }
                 }
             }
             return axisRecord;
         },
-        _axisSectionPoint: function () {
-            var sectionTotal = this.options.section[this.options.section.length - 1] - this.options.section[0] + 1;
+        _axisSectionPoint: function (sections) {
             var positions = [];
-            while (sectionTotal-- > 0) {
-                positions.push(sectionTotal * this.options.axisItemWidth + Math.ceil(this.options.axisTicks.width / 2));
+            for(var i = 0 ; i < sections.length; i += 1){
+                var point = i * this.options.axisItemWidth + Math.ceil(this.options.axisTicks.width / 2);
+                positions.push(point);
             }
-            return positions.reverse();
+            return positions;
         },
-        _axisMonthPoint: function () {
+        _axisMonthPoint: function (sections,month) {
             var axisTicksPosition = this._axisTicksPosition();
-            var sections = this._axisSectionOrder();
-            var month = this._axisMonthOrder();
             //todo
-            var axisMonthPoint = {};
+            var axisMonthPoint = [];
             for (var i = 0; i < sections.length; i += 1) {
-                axisMonthPoint[sections[i]] = [];
+                var pointMonth = [];
                 if (i !== (sections.length - 1)) {
                     for (var j = 0; j < month.length; j += 1) {
-                        var monthPoint = axisTicksPosition[i] + this.options.axisTicks.width + this.options.axisItemTicksWidth * j + Math.ceil(this.options.axisItemTicksWidth / 2);
-                        axisMonthPoint[sections[i]].push(monthPoint);
+                        var monthPoint = axisTicksPosition[i] + this.options.axisTicks.width + this._axisItemTicksWidth * j + Math.ceil(this._axisItemTicksWidth / 2);
+                        pointMonth.push(monthPoint);
                     }
+                    axisMonthPoint.push(pointMonth);
                 }
             }
             return axisMonthPoint;
         },
-        _axisDayPoint: function () {
-            //todo
+        _axisDayPoint: function (monthPoint,day) {
+            var axisDayPoint = [];
+            for(var i = 0; i < monthPoint.length; i += 1){
+                var daySplitPoint = [];
+                for(var m = 0; m < monthPoint[i].length; m += 1){
+                    var days = day[i][m];
+                    var dayAllPoint = [];
+                    for(var d = 0; d < days; d += 1){
+                        var dayWidth = parseFloat((this._axisItemTicksWidth/days).toFixed(2));
+                        var dayWidthHalf = parseFloat((dayWidth/2).toFixed(2));
+                        var dayPoint = monthPoint[i][m] + dayWidth * d + dayWidthHalf;
+                        dayAllPoint.push(dayPoint);
+                    }
+                    daySplitPoint.push(dayAllPoint);
+                }
+                axisDayPoint.push(daySplitPoint);
+            }
+            return axisDayPoint;
         }
     };
     Timeline.Drag = function (element, options) {

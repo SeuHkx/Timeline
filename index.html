@@ -42,29 +42,21 @@
 <script>
     var timeLineAll = Timeline.init({
         renderTo: 'timeline',
-        section: [2012, 2017],
+        section: [2012, 2014],
         slider: {
-            location: ['2012-02','2012-03']
+            location: ['2012-02','2012-06']
         },
         slidersArea:{
             show:true
         }
     });
-    setTimeout(function () {
-        timeLineAll.setOption({
-            section: [2012, 2014],
-            slider:{
-                location: ['2012-02','2013-03']
-            }
-        })
-    },2000);
     var buttonsDate = document.getElementById('buttonsDate').getElementsByTagName('a');
     var timeLineDateOptions = {
         axisType: 'average',
         renderTo: 'timeline-module',
         section: [2012, 2018],
         slider: {
-            location: ['2015'],
+            location: ['2015']
         },
         axisTicksLineStyle: {
             height: 12,
