@@ -98,9 +98,6 @@
         };
         this.drag = function () {
         };
-        this.dragArea = function () {
-
-        };
         this.dataTime = [];
         this.setOption = function (option) {
             if(this.options.axisType !== option.axisType && typeof option.axisType !== 'undefined'){
@@ -137,9 +134,12 @@
             } catch (e) {
                 console.warn('renderTo is error or renderTo is null')
             }
-            var section = this.options.section[this.options.section.length - 1] - this.options.section[0] + 1;
-            this.options.axisTicks.width = this.options.axisItemWidth = renderToWidth / section;
+            this.axis.recordPoint = [];
+            this.axis.recordData  = {};
+            this.axis.width = renderToWidth;
+            this.options.axisTicks.width = this.options.axisItemWidth = renderToWidth / (this.options.section[this.options.section.length - 1] - this.options.section[0] + 1);
             this.axis.element = Timeline.parseDom(this._axisTemplate(renderToWidth, false))[0];
+            this.axisRecord = this._axisRecord();
         },
         _renderTypeOrder:function () {
             this.axis.recordPoint = [];
@@ -232,17 +232,15 @@
             this._sliderJudgeData(moveX,that);
         },
         _slidersAreaJudgeData : function (moveX,that) {
-            var dataTime = [];
             var pointArr = Timeline.jointArrayGroup(this.axis.recordPoint);
             for (var i = 0; i < pointArr.length; i += 1) {
                 if (pointArr[i][0] < moveX && moveX < pointArr[i][1]) {
                     var pointValue = this.axis.recordData[pointArr[i][0]];
                     that.slidersTipsRight.innerHTML = pointValue;
-                    this.dragArea(pointValue);
-                    dataTime.push(pointValue);
                 }
             }
-            this.dataTime[1] = dataTime.pop();
+            if(typeof this.dataTime[0] === 'undefined')this.dataTime[0] = this.options.slider.location[0];
+            if(typeof pointValue !== 'undefined')this.dataTime[1] = pointValue;
         },
         _sliderCommonLimitJudge: function (type,moveX, that, callback) {
             var limitLeft = 0,limitRight = 0;
@@ -357,7 +355,6 @@
             this._sliderJudgeData(moveX,that);
         },
         _sliderJudgeData:function (moveX,that) {
-            var dataTime = [];
             var pointGroup = Timeline.jointArrayGroup(this.axis.recordPoint);
             for (var i = 0; i < pointGroup.length; i += 1) {
                 if (pointGroup[i][0] < moveX && moveX < pointGroup[i][1]) {
@@ -369,10 +366,11 @@
                     }
                     that.slidersTips.innerHTML = pointValue;
                     this.drag(pointValue);
-                    dataTime.push(pointValue);
                 }
             }
-            this.dataTime[0] = dataTime.pop();
+            if(typeof pointValue !== 'undefined'){
+                this.dataTime[0] = pointValue;
+            }
         },
         _sliderArrChange: function (array) {
             var arr = [];
@@ -644,20 +642,19 @@
                 axisRecord[sections[i]] = sectionsPoint[i];
                 this.axis.recordData[sectionsPoint[i]] = sections[i].toString();
                 this.axis.recordPoint.push(sectionsPoint[i]);
-                //year
-                if (i !== (sections.length - 1)) {
-                    for (var m = 0; m < month.length; m += 1) {
-                        //month
-                        axisRecord[sections[i] + '-' + month[m]] = Math.ceil(monthPoint[i][m]);
-                        this.axis.recordData[Math.ceil(monthPoint[i][m])] = sections[i] + '-' + month[m];
-                        this.axis.recordPoint.push(Math.ceil(monthPoint[i][m]));
-                        //day
-                        var days = day[i][m];
-                        for(var d = 0; d < days; d += 1){
-                            var repairDay = d < 10 ? ('-0'+d):'-'+(d+1);
-                            repairDay = d === 0 ? '': repairDay;
-                            this.axis.recordData[dayPoint[i][m][d]] = sections[i] + '-' + month[m] + repairDay;
-                            this.axis.recordPoint.push(dayPoint[i][m][d]);
+                if(this.options.axisType === 'order'){
+                    if (i !== (sections.length - 1)) {
+                        for (var m = 0; m < month.length; m += 1) {
+                            axisRecord[sections[i] + '-' + month[m]] = Math.ceil(monthPoint[i][m]);
+                            this.axis.recordData[Math.ceil(monthPoint[i][m])] = sections[i] + '-' + month[m];
+                            this.axis.recordPoint.push(Math.ceil(monthPoint[i][m]));
+                            var days = day[i][m];
+                            for(var d = 0; d < days; d += 1){
+                                var repairDay = d < 10 ? ('-0'+d):'-'+(d+1);
+                                repairDay = d === 0 ? '': repairDay;
+                                this.axis.recordData[dayPoint[i][m][d]] = sections[i] + '-' + month[m] + repairDay;
+                                this.axis.recordPoint.push(dayPoint[i][m][d]);
+                            }
                         }
                     }
                 }
@@ -674,7 +671,6 @@
         },
         _axisMonthPoint: function (sections,month) {
             var axisTicksPosition = this._axisTicksPosition();
-            //todo
             var axisMonthPoint = [];
             for (var i = 0; i < sections.length; i += 1) {
                 var pointMonth = [];
