@@ -1,0 +1,24 @@
+body {
+    background-color: #fff;
+}
+.container {
+    position: relative;
+    width: 1020px;
+    margin: 50px auto;
+}
+.timeline-wrap, .timeline-module {
+    position: relative;
+    height: 170px;
+}
+.charts-wrap{
+    height: 360px;
+}
+.timeline{
+    position: absolute;
+    left: 0;
+    right: 0;
+    top:320px;
+}
+#buttonsDate{
+    z-index: 9999;
+}

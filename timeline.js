@@ -4,22 +4,22 @@
 ;!(function (global, factory) {
     if (typeof define === 'function' && define.amd) {
         define([], function () {
-            return factory.apply(window);
+            return factory.apply(this);
         })
     }
     if (typeof exports === 'object' && typeof module === 'object') {
-        module.exports = factory.call(window);
+        module.exports = factory.call(this);
     } else {
-        window.Timeline = factory.call(window, document);
+        this.Timeline = factory.call(this, document);
     }
-}(typeof global === 'object' ? global : window, function (doc) {
+}(typeof global === 'object' ? global : this, function (doc) {
     'use strict';
     var Timeline = function () {
         if (!(this instanceof Timeline)) {
             return new Timeline();
         }
         this.version = '1.0.0';
-        this.github = 'http://github.com/SeuHkx';
+        this.github = 'http://github.com/SeuHkx/Timeline';
     };
     Timeline.fn = Timeline.prototype;
     var timeLine = Timeline.fn.init = function (options) {
@@ -49,9 +49,10 @@
                 color: '#fff'
             },
             axisTicks: {
-                width: 60,
+                width: 100,
                 fontSize: 14,
                 color: '#bfbfbf',
+                unit:''
             },
             axisTicksLineStyle: {
                 height: 28,
@@ -64,11 +65,11 @@
                 height: 16,
                 width: 1,
                 bgColor: '#cfcfcf',
-                color: '#cfcfcf'
+                color: '#cfcfcf',
+                unit:''||['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
             }
         };
         Timeline.extends(this.options, options);
-        this._axisItemTicksWidth = (this.options.axisItemWidth - this.options.axisTicks.width)/12;
         this.axis = {
             renderTo: doc.getElementById(this.options.renderTo),
             element: null,
@@ -80,6 +81,7 @@
             recordPoint: [],
             recordData: {}
         };
+        this._axisItemTicksWidth = (this.options.axisItemWidth - this.options.axisTicks.width)/12;
         this.axisRecord = this._axisRecord();
         if (this.options.axisType === 'order') {
             this.axis.element = Timeline.parseDom(this._axisTemplate(this.axis.width, true))[0];
@@ -144,6 +146,8 @@
             this.axis.recordData  = {};
             this.axis.width   = this._axisTemplateWidth();
             this.axis.element = Timeline.parseDom(this._axisTemplate(this.axis.width, true))[0];
+            this.axisRecord = this._axisRecord();
+            this._axisItemTicksWidth = (this.options.axisItemWidth - this.options.axisTicks.width)/12;
             this._render();
         },
         _render: function () {
@@ -205,7 +209,7 @@
                         this.axis.slidersAreaCalculationWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
                     }.bind(this),
                     limit: function (moveX, that) {
-                        return this._sliderCommonLimitJudge(moveX, that, this._slidersAreaJudgeCallback);
+                        return this._sliderCommonLimitJudge('sliderArea',moveX, that, this._slidersAreaJudgeCallback);
                     }.bind(this)
                 });
             }
@@ -223,16 +227,16 @@
                 this._slidersAreaJudgeData(parseInt(getComputedStyle(this.axis.slidersMirror[1])['left']),that);
             }
             that.previous.pointX = moveX;
-            this.axis.slidersMirror[0].style.left = moveX + 'px';
+            this.axis.slidersMirror[0].style.left = moveX - this.options.slider.width/2 + 'px';
             //todo data
             this._sliderJudgeData(moveX,that);
         },
         _slidersAreaJudgeData : function (moveX,that) {
             var dataTime = [];
             var pointArr = Timeline.jointArrayGroup(this.axis.recordPoint);
-            for (var ii = 0; ii < pointArr.length; ii += 1) {
-                if (pointArr[ii][0] < moveX && moveX <= pointArr[ii][1]) {
-                    var pointValue = this.axis.recordData[pointArr[ii][0]];
+            for (var i = 0; i < pointArr.length; i += 1) {
+                if (pointArr[i][0] < moveX && moveX < pointArr[i][1]) {
+                    var pointValue = this.axis.recordData[pointArr[i][0]];
                     that.slidersTipsRight.innerHTML = pointValue;
                     this.dragArea(pointValue);
                     dataTime.push(pointValue);
@@ -240,9 +244,16 @@
             }
             this.dataTime[1] = dataTime.pop();
         },
-        _sliderCommonLimitJudge: function (moveX, that, callback) {
-            var limitLeft = this.options.axisTicks.width / 2;
-            var limitRight = this.axis.width - this.options.axisTicks.width / 2 - this.axis.slidersAreaCalculationWidth;
+        _sliderCommonLimitJudge: function (type,moveX, that, callback) {
+            var limitLeft = 0,limitRight = 0;
+            if(type === 'slider'){
+                limitLeft = this.options.axisTicks.width / 2 - this.options.slider.width/2;
+                limitRight = this.axis.width - this.options.axisTicks.width / 2 - this.options.slider.width/2;
+            }
+            if(type === 'sliderArea'){
+                limitLeft = this.options.axisTicks.width / 2;
+                limitRight = this.axis.width - this.options.axisTicks.width / 2 - this.axis.slidersAreaCalculationWidth;
+            }
             moveX = moveX < limitLeft  ? limitLeft  : moveX;
             moveX = moveX > limitRight ? limitRight : moveX;
             callback.call(this, moveX, that);
@@ -256,7 +267,6 @@
         },
         _slidersAreaStyle: function (sliderArea) {
             var positionTop = -this.options.slidersArea.height / 2;
-            //var axisRecord = this._axisRecord();
             if (this.options.slidersArea.position === 'bottom') {
                 positionTop = 0;
             }
@@ -270,7 +280,6 @@
                         if(typeof this.axisRecord[this.options.slider.location[lastIndex]] === 'undefined'){
                             this.axisRecord[this.options.slider.location[lastIndex]] = this.axisRecord[this.options.section[1]];
                         }
-                        //console.log(this.options.slider.location[lastIndex],this.options.slider.location[i])
                         this.axis.slidersAreaCalculationWidth = this.axisRecord[this.options.slider.location[lastIndex]] - this.axisRecord[this.options.slider.location[i]];
                     }
                 }
@@ -293,53 +302,55 @@
             if (this.options.slidersArea.show) {
                 this._slidersAreaExecute();
             }
-            this._sliderPositionInitDrag();
+            this._sliderInitDrag();
         },
-        _sliderPositionInitDrag : function () {
-            //var axisRecord = this._axisRecord();
+        _sliderInitPosition:function (elements,index) {
+            elements['style']['left']  = this.axisRecord[this.options.slider.location[index]] - this.options.slider.width/2 + 'px';
+            elements['style']['width'] = this.options.slider.width + 'px';
+            this.axis.element.appendChild(elements);
+        },
+        _sliderInitDrag : function () {
             for (var i = 0; i < this.axis.sliders.length; i += 1) {
                 if(typeof this.axisRecord[this.options.slider.location[i]] === 'undefined'){
                     this.axisRecord[this.options.slider.location[i]] = this.axisRecord[this.options.section[i]];
                     console.warn('location is overflow');
                 }
-                this.axis.sliders[i]['style']['left'] = this.axisRecord[this.options.slider.location[i]] + 'px';
-                this.axis.sliders[i]['style']['width'] = this.options.slider.width + 'px';
-                this.axis.element.appendChild(this.axis.sliders[i]);
+                this._sliderInitPosition(this.axis.sliders[i],i);
                 //todo drag end
                 Timeline.Drag(this.axis.sliders[i], {
                     start: function (that) {
                         that.slidersTips = this._sliderScanTips(that.element.childNodes, []).shift();
                         that.previous.pointX = this._sliderScanParent(that.slidersTips,[]).shift().offsetLeft;
+                        that.lastPointX = this.axisRecord[this.options.section[1]] - this._axisItemTicksWidth/2;
                         if(this.axis.slidersArea!== null){
                             that.slidersAreaCalculationWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
                             that.slidersAreaLeft  = this.axis.slidersArea.offsetLeft;
                             that.slidersAreaRight = that.slidersAreaCalculationWidth + that.slidersAreaLeft;
                         }
-                        this.axis.slidersAreaCalculationWidth = 0;
                     }.bind(this),
                     limit: function (moveX, that) {
-                        return this._sliderCommonLimitJudge(moveX, that, this._sliderJudgeCallback);
+                        return this._sliderCommonLimitJudge('slider',moveX, that, this._sliderJudgeCallback);
                     }.bind(this)
                 });
             }
         },
         _sliderJudgeCallback: function (moveX, that) {
-            if (that.slidersAreaLeft === that.previous.pointX) {
+            if (that.slidersAreaLeft > that.previous.pointX && that.slidersAreaRight > that.previous.pointX) {
                 if (moveX > that.slidersAreaRight) {
-                    this.axis.slidersArea.style.left = that.slidersAreaRight + 'px';
-                    this.axis.slidersArea.style.width = moveX - that.slidersAreaRight + 'px';
+                    this.axis.slidersArea.style.left  = that.slidersAreaRight + 'px';
+                    this.axis.slidersArea.style.width = moveX - that.slidersAreaRight + this.options.slider.width/2 + 'px';
                 } else {
                     this.axis.slidersArea.style.width = that.slidersAreaCalculationWidth + that.previous.pointX - moveX + 'px';
-                    this.axis.slidersArea.style.left = moveX + 'px';
+                    this.axis.slidersArea.style.left  = moveX + this.options.slider.width/2 + 'px';
                 }
             }
-            if (that.slidersAreaRight === that.previous.pointX) {
+            if (that.slidersAreaRight > that.previous.pointX && that.previous.pointX > that.slidersAreaLeft) {
                 if (moveX < that.slidersAreaLeft) {
-                    this.axis.slidersArea.style.width = that.slidersAreaLeft - moveX + 'px';
-                    this.axis.slidersArea.style.left = moveX + 'px';
+                    this.axis.slidersArea.style.width = that.slidersAreaLeft - moveX - this.options.slider.width/2 + 'px';
+                    this.axis.slidersArea.style.left  = moveX + this.options.slider.width/2 + 'px';
                 } else {
                     this.axis.slidersArea.style.width = that.slidersAreaCalculationWidth + moveX - that.previous.pointX + 'px';
-                    this.axis.slidersArea.style.left = that.slidersAreaLeft + 'px';
+                    this.axis.slidersArea.style.left  = that.slidersAreaLeft  + 'px';
                 }
             }
             //todo data
@@ -348,13 +359,17 @@
         _sliderJudgeData:function (moveX,that) {
             var dataTime = [];
             var pointGroup = Timeline.jointArrayGroup(this.axis.recordPoint);
-            for (var ii = 0; ii < pointGroup.length; ii += 1) {
-                if (pointGroup[ii][0] < moveX && moveX < pointGroup[ii][1]) {
-                    var pointValue = this.axis.recordData[pointGroup[ii][0]];
+            for (var i = 0; i < pointGroup.length; i += 1) {
+                if (pointGroup[i][0] < moveX && moveX < pointGroup[i][1]) {
+                    var pointValue = '';
+                    if(moveX >= that.lastPointX){
+                        pointValue = this.axis.recordData[pointGroup[i][1]];
+                    }else{
+                        pointValue = this.axis.recordData[pointGroup[i][0]];
+                    }
                     that.slidersTips.innerHTML = pointValue;
                     this.drag(pointValue);
                     dataTime.push(pointValue);
-
                 }
             }
             this.dataTime[0] = dataTime.pop();
@@ -512,6 +527,7 @@
                 position: 'absolute;',
                 width: this.options.axisItemWidth - this.options.axisTicks.width + 'px;',
                 left: axisItemTicksTemplatePositions[index] + 'px;',
+                transition: 'all 1s cubic-bezier(0.1, 0.57, 0.1, 1);',
                 height: '1px;'
             };
             var style = Timeline.generateStyle(styles);
@@ -626,19 +642,21 @@
             var axisRecord = {};
             for (var i = 0, l = sections.length; i < l; i += 1) {
                 axisRecord[sections[i]] = sectionsPoint[i];
-                this.axis.recordData[sectionsPoint[i]] = sections[i];
+                this.axis.recordData[sectionsPoint[i]] = sections[i].toString();
                 this.axis.recordPoint.push(sectionsPoint[i]);
                 //year
                 if (i !== (sections.length - 1)) {
                     for (var m = 0; m < month.length; m += 1) {
                         //month
-                        axisRecord[sections[i] + '-' + month[m]] = monthPoint[i][m];
+                        axisRecord[sections[i] + '-' + month[m]] = Math.ceil(monthPoint[i][m]);
                         this.axis.recordData[Math.ceil(monthPoint[i][m])] = sections[i] + '-' + month[m];
                         this.axis.recordPoint.push(Math.ceil(monthPoint[i][m]));
                         //day
                         var days = day[i][m];
                         for(var d = 0; d < days; d += 1){
-                            this.axis.recordData[dayPoint[i][m][d]] = sections[i] + '-' + month[m] + '-' + (d+1);
+                            var repairDay = d < 10 ? ('-0'+d):'-'+(d+1);
+                            repairDay = d === 0 ? '': repairDay;
+                            this.axis.recordData[dayPoint[i][m][d]] = sections[i] + '-' + month[m] + repairDay;
                             this.axis.recordPoint.push(dayPoint[i][m][d]);
                         }
                     }
