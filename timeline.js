@@ -30,6 +30,7 @@
             renderTo: '',
             section: [2012, 2017],
             slidersArea: {
+                drag:true,
                 show: true,
                 position: 'center' || 'bottom',
                 height: 6,
@@ -37,18 +38,23 @@
             },
             slider: {
                 show: true,
+                text:true,
                 template: '<div class="timeline-slide"><div class="slide-tips">${location}</div><div class="slide"></div></div>',
                 location: ['2012-02', '2013'],
                 width: 14
             },
             axisType: 'order' || 'average',
             axisStyle: {
+                height:0,
                 bgColor: 'transparent',
+                bdSize :1,
                 bdColor: '#bfbfbf',
                 bdStyle: 'solid',
-                color: '#fff'
+                color: '#fff',
+                radius:0
             },
             axisTicks: {
+                show:true,
                 width: 100,
                 fontSize: 14,
                 color: '#bfbfbf',
@@ -198,20 +204,22 @@
         _slidersAreaExecute: function () {
             if(this.options.slidersArea.show && this.options.slider.location.length > 1){
                 this.axis.slidersArea = this._slidersArea();
-                Timeline.Drag(this.axis.slidersArea, {
-                    start: function (that) {
-                        if(this.axis.slidersMirror[0].offsetLeft > this.axis.slidersMirror[1].offsetLeft){
-                            this.axis.slidersMirror = this._sliderArrChange(this.axis.sliders);
-                        }
-                        that.slidersTips = this._sliderScanTips(this.axis.slidersMirror, []).shift();
-                        that.slidersTipsRight = this._sliderScanTips(this.axis.slidersMirror, []).pop();
-                        that.previous.pointX = that.element.offsetLeft;
-                        this.axis.slidersAreaCalculationWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
-                    }.bind(this),
-                    limit: function (moveX, that) {
-                        return this._sliderCommonLimitJudge('sliderArea',moveX, that, this._slidersAreaJudgeCallback);
-                    }.bind(this)
-                });
+                if(this.options.slidersArea.drag){
+                    Timeline.Drag(this.axis.slidersArea, {
+                        start: function (that) {
+                            if(this.axis.slidersMirror[0].offsetLeft > this.axis.slidersMirror[1].offsetLeft){
+                                this.axis.slidersMirror = this._sliderArrChange(this.axis.sliders);
+                            }
+                            that.slidersTips = this._sliderScanTips(this.axis.slidersMirror, []).shift();
+                            that.slidersTipsRight = this._sliderScanTips(this.axis.slidersMirror, []).pop();
+                            that.previous.pointX = that.element.offsetLeft;
+                            this.axis.slidersAreaCalculationWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
+                        }.bind(this),
+                        limit: function (moveX, that) {
+                            return this._sliderCommonLimitJudge('sliderArea',moveX, that, this._slidersAreaJudgeCallback);
+                        }.bind(this)
+                    });
+                }
             }
         },
         _slidersAreaJudgeCallback: function (moveX, that) {
@@ -415,17 +423,22 @@
         _axisTemplateStyle: function (width) {
             var styles = {
                 position: 'absolute;',
-                top: '50%;',
+                top: '0;',
                 left: '0;',
                 right: '0;',
                 bottom: '0;',
                 width: width + 'px;',
+                height:this.options.axisStyle.height + 'px;',
                 background: this.options.axisStyle.bgColor + ';',
                 transition: 'all 1s cubic-bezier(0.1, 0.57, 0.1, 1);',
                 cursor: 'move;',
+                borderRadius:{
+                    name:'border-radius',
+                    value: this.options.axisStyle.radius + 'px;'
+                },
                 borderTop: {
                     name: 'border-top',
-                    value: '1px ' + this.options.axisStyle.bdStyle + ' ' + this.options.axisStyle.bdColor + ';'
+                    value: this.options.axisStyle.bdSize + 'px ' + this.options.axisStyle.bdStyle + ' ' + this.options.axisStyle.bdColor + ';'
                 }
             };
             var style = Timeline.generateStyle(styles);
@@ -437,6 +450,7 @@
             return totalWidth;
         },
         _axisTicksTemplate: function (fn) {
+            if(!this.options.axisTicks.show)return '';
             if (typeof fn !== 'function') {
                 fn = function () {
                     return '';

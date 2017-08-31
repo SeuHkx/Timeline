@@ -13,6 +13,17 @@
     -webkit-user-select: none;
     user-select: none;
 }
+.timeline-slide.custom{
+    top:-13px;
+}
+.timeline-slide.custom .wd-triangle--bottom{
+    border-right: 7px solid transparent;
+    border-right: .07rem solid transparent;
+    border-left: 7px solid transparent;
+    border-left: .07rem solid transparent;
+    border-top: 7px solid #CD0E3C;
+    border-top: .07rem solid #CD0E3C;
+}
 .timeline-slide .slide{
     position: relative;
     width: 14px;
@@ -59,6 +70,16 @@
     background-color: #333740;
     -webkit-user-select: none;
     user-select: none;
+}
+.timeline-slide .tips{
+    position: absolute;
+    top:-12px;
+    width: 30px;
+    height: 30px;
+    left: 50%;
+    margin-left: -15px;
+    text-align: center;
+    color: #fff;
 }
 .slide-tips:after{
     display:block;

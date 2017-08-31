@@ -1,14 +1,30 @@
 body {
     background-color: #fff;
 }
+.dark-body{
+    background-color: #2B2B2D;
+}
 .container {
     position: relative;
     width: 1020px;
     margin: 50px auto;
 }
+.container.custom{
+    width: 300px;
+}
 .timeline-wrap, .timeline-module {
     position: relative;
     height: 170px;
+}
+.timeline-custom{
+    height: 16px;
+}
+.custom-text{
+    color: #fff;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 20px;
 }
 .charts-wrap{
     height: 360px;

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Custom</title>
+    <link rel="stylesheet" href="../wild.min.css"/>
+    <link rel="stylesheet" href="../css/styles/index.css"/>
+    <link rel="stylesheet" href="../css/timeline.css"/>
+</head>
+<body class="dark-body">
+<div class="container custom">
+    <div class="timeline-wrap">
+        <div class="timeline-custom" id="timeline-custom">
+            <div class="wd-grid--fluid custom-text">
+                <div class="wd-grid-2 wd-typo-text--center">-50</div>
+                <div class="wd-grid-2 wd-typo-text--center">-30</div>
+                <div class="wd-grid-2 wd-typo-text--center">-20</div>
+                <div class="wd-grid-2 wd-typo-text--center">10</div>
+                <div class="wd-grid-2 wd-typo-text--center">30</div>
+                <div class="wd-grid-2 wd-typo-text--center">50</div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="../timeline.js"></script>
+<script>
+    window.onload = function () {
+        var timeLineCustomOptions = {
+            axisType: 'average',
+            renderTo: 'timeline-custom',
+            section: [-50, 50],
+            axisStyle: {
+                height : 16,
+                bdSize:0,
+                bgColor: '-webkit-linear-gradient(left, #2e3e54 0%,#393949 50%,#512c33 100%);',
+                radius:10
+            },
+            slider: {
+                location: [-8,30],
+                template: '<div class="timeline-slide custom"><span class="wd-triangle wd-triangle--bottom"></span><span class="tips">${location}</span></div>'
+            },
+            slidersArea:{
+                drag:false,
+                height:16,
+                position:'bottom',
+                bgColor:'-webkit-linear-gradient(left, #607ad9 0%,#935fa9 50%,#bb487f 100%)'
+            },
+            axisTicks:{
+                show:false
+            }
+        };
+        var timeLineCustom = Timeline.init(timeLineCustomOptions);
+        console.log(timeLineCustom)
+    }
+</script>
+</body>
+</html>

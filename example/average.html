@@ -22,7 +22,7 @@
         </div>
     </div>
     <script src="../echarts-2.2.7/echarts-all.js"></script>
-    <script src="../timeline.min.js"></script>
+    <script src="../timeline.js"></script>
     <script>
         window.onload = function () {
             var dataAll = {};
@@ -38,7 +38,7 @@
                 renderTo: 'timeline-module',
                 section: [2012, 2018],
                 slider: {
-                    location: ['2015']
+                    location: ['2015','2016']
                 },
                 axisTicksLineStyle: {
                     height: 12,
@@ -46,7 +46,7 @@
                     bgColor: '#bfbfbf'
                 }
             };
-            changeDataAll([2012, 2018])
+            changeDataAll([2012, 2018]);
             var timeLineDate = Timeline.init(timeLineDateOptions);
             for (var i = 0; i < buttonsDate.length; i += 1) {
                 buttonsDate[i].addEventListener('click', function () {
@@ -56,7 +56,7 @@
                             timeLineDate.setOption({
                                     section: [2012, 2018],
                                     slider: {
-                                        location: ['2015'],
+                                        location: ['2015']
                                     }
                                 }
                             );
