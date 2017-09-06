@@ -31,7 +31,7 @@
             section: [2012, 2017],
             slidersArea: {
                 drag:true,
-                show: true,
+                show:true,
                 position: 'center' || 'bottom',
                 height: 6,
                 bgColor: 'rgba(51, 55, 64, 0.5)'
@@ -45,7 +45,7 @@
             },
             axisType: 'order' || 'average',
             axisStyle: {
-                height:0,
+                height:1,
                 bgColor: 'transparent',
                 bdSize :1,
                 bdColor: '#bfbfbf',
@@ -213,6 +213,7 @@
                             that.slidersTips = this._sliderScanTips(this.axis.slidersMirror, []).shift();
                             that.slidersTipsRight = this._sliderScanTips(this.axis.slidersMirror, []).pop();
                             that.previous.pointX = that.element.offsetLeft;
+                            that.lastPointX  = this.axisRecord[this.options.section[1]] - this.options.slider.width;
                             this.axis.slidersAreaCalculationWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
                         }.bind(this),
                         limit: function (moveX, that) {
@@ -223,6 +224,7 @@
             }
         },
         _slidersAreaJudgeCallback: function (moveX, that) {
+            //todo
             var distance = 0;
             if (that.previous.pointX < moveX) {
                 distance = moveX - that.previous.pointX;
@@ -231,7 +233,7 @@
             }
             if (that.previous.pointX > moveX) {
                 distance = that.previous.pointX - moveX;
-                this.axis.slidersMirror[1].style.left = parseInt(getComputedStyle(this.axis.slidersMirror[1])['left']) - distance + 'px';
+                this.axis.slidersMirror[1].style.left = (parseInt(this.axis.slidersArea.offsetLeft) + this.axis.slidersAreaCalculationWidth - this.options.slider.width/2) - distance + 'px' ;//
                 this._slidersAreaJudgeData(parseInt(getComputedStyle(this.axis.slidersMirror[1])['left']),that);
             }
             that.previous.pointX = moveX;
@@ -243,7 +245,11 @@
             var pointArr = Timeline.jointArrayGroup(this.axis.recordPoint);
             for (var i = 0; i < pointArr.length; i += 1) {
                 if (pointArr[i][0] < moveX && moveX < pointArr[i][1]) {
-                    var pointValue = this.axis.recordData[pointArr[i][0]];
+                    var pointValue = '';
+                    pointValue = this.axis.recordData[pointArr[i][0]];
+                    if(moveX > that.lastPointX){
+                        pointValue = this.axis.recordData[pointArr[i][1]];
+                    }
                     that.slidersTipsRight.innerHTML = pointValue;
                 }
             }
@@ -251,17 +257,20 @@
             if(typeof pointValue !== 'undefined')this.dataTime[1] = pointValue;
         },
         _sliderCommonLimitJudge: function (type,moveX, that, callback) {
-            var limitLeft = 0,limitRight = 0;
+            var limitLeft  = 0,
+                limitRight = 0;
             if(type === 'slider'){
-                limitLeft = this.options.axisTicks.width / 2 - this.options.slider.width/2;
+                limitLeft  = this.options.axisTicks.width / 2 - this.options.slider.width/2;
                 limitRight = this.axis.width - this.options.axisTicks.width / 2 - this.options.slider.width/2;
             }
             if(type === 'sliderArea'){
-                limitLeft = this.options.axisTicks.width / 2;
+                limitLeft  = this.options.axisTicks.width / 2;
                 limitRight = this.axis.width - this.options.axisTicks.width / 2 - this.axis.slidersAreaCalculationWidth;
             }
             moveX = moveX < limitLeft  ? limitLeft  : moveX;
             moveX = moveX > limitRight ? limitRight : moveX;
+            that.limitLeft  = limitLeft;
+            that.limitRight = limitRight;
             callback.call(this, moveX, that);
             return moveX;
         },
@@ -311,7 +320,7 @@
             this._sliderInitDrag();
         },
         _sliderInitPosition:function (elements,index) {
-            elements['style']['left']  = this.axisRecord[this.options.slider.location[index]] - this.options.slider.width/2 + 'px';
+            elements['style']['left']  = this.axisRecord[this.options.slider.location[index]] - this.options.slider.width/2 + 1 + 'px';
             elements['style']['width'] = this.options.slider.width + 'px';
             this.axis.element.appendChild(elements);
         },
@@ -327,7 +336,7 @@
                     start: function (that) {
                         that.slidersTips = this._sliderScanTips(that.element.childNodes, []).shift();
                         that.previous.pointX = this._sliderScanParent(that.slidersTips,[]).shift().offsetLeft;
-                        that.lastPointX = this.axisRecord[this.options.section[1]] - this._axisItemTicksWidth/2;
+                        that.lastPointX = this.axisRecord[this.options.section[1]] - this.options.slider.width;
                         if(this.axis.slidersArea!== null){
                             that.slidersAreaCalculationWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
                             that.slidersAreaLeft  = this.axis.slidersArea.offsetLeft;
@@ -367,10 +376,12 @@
             for (var i = 0; i < pointGroup.length; i += 1) {
                 if (pointGroup[i][0] < moveX && moveX < pointGroup[i][1]) {
                     var pointValue = '';
-                    if(moveX >= that.lastPointX){
+                    pointValue = this.axis.recordData[pointGroup[i][0]];
+                    if(moveX > that.lastPointX){
                         pointValue = this.axis.recordData[pointGroup[i][1]];
-                    }else{
-                        pointValue = this.axis.recordData[pointGroup[i][0]];
+                    }
+                    if(moveX === that.limitLeft){
+                        pointValue = this.axis.recordData[pointGroup[0][0]];
                     }
                     that.slidersTips.innerHTML = pointValue;
                     this.drag(pointValue);
@@ -423,7 +434,7 @@
         _axisTemplateStyle: function (width) {
             var styles = {
                 position: 'absolute;',
-                top: '0;',
+                top: this.options.axisType === 'order' ? '50%;':'0;',
                 left: '0;',
                 right: '0;',
                 bottom: '0;',
@@ -654,20 +665,20 @@
             var axisRecord = {};
             for (var i = 0, l = sections.length; i < l; i += 1) {
                 axisRecord[sections[i]] = sectionsPoint[i];
-                this.axis.recordData[sectionsPoint[i]] = sections[i].toString();
-                this.axis.recordPoint.push(sectionsPoint[i]);
+                this.axis.recordData[sectionsPoint[i] - this.options.slider.width/2] = sections[i].toString();
+                this.axis.recordPoint.push(sectionsPoint[i] - this.options.slider.width/2);
                 if(this.options.axisType === 'order'){
                     if (i !== (sections.length - 1)) {
                         for (var m = 0; m < month.length; m += 1) {
                             axisRecord[sections[i] + '-' + month[m]] = Math.ceil(monthPoint[i][m]);
-                            this.axis.recordData[Math.ceil(monthPoint[i][m])] = sections[i] + '-' + month[m];
-                            this.axis.recordPoint.push(Math.ceil(monthPoint[i][m]));
+                            this.axis.recordData[Math.ceil(monthPoint[i][m]) - this.options.slider.width/2] = sections[i] + '-' + month[m];
+                            this.axis.recordPoint.push(Math.ceil(monthPoint[i][m]) - this.options.slider.width/2);
                             var days = day[i][m];
                             for(var d = 0; d < days; d += 1){
                                 var repairDay = d < 10 ? ('-0'+d):'-'+(d+1);
                                 repairDay = d === 0 ? '': repairDay;
-                                this.axis.recordData[dayPoint[i][m][d]] = sections[i] + '-' + month[m] + repairDay;
-                                this.axis.recordPoint.push(dayPoint[i][m][d]);
+                                this.axis.recordData[dayPoint[i][m][d] - this.options.slider.width/2 ] = sections[i] + '-' + month[m] + repairDay;
+                                this.axis.recordPoint.push(dayPoint[i][m][d] - this.options.slider.width/2);
                             }
                         }
                     }

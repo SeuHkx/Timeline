@@ -7,6 +7,11 @@
     <link rel="stylesheet" href="css/styles/index.css"/>
     <link rel="stylesheet" href="css/timeline.css"/>
     <title>Timeline</title>
+    <style>
+        .timeline-module > div{
+            top:50%;
+        }
+    </style>
 </head>
 <body>
 <div class="container">
@@ -16,7 +21,7 @@
     </div>
 </div>
 <script src="echarts-2.2.7/echarts-all.js"></script>
-<script src="timeline.min.js"></script>
+<script src="timeline.js"></script>
 <script>
     window.onload = function () {
         var timeLine = Timeline.init({
