@@ -51,9 +51,14 @@
                     bgColor: '#bfbfbf'
                 }
             };
+            var dateType = {
+                year: '',
+                month: '',
+                day: ''
+            };
             changeDataAll([2012, 2018]);
             var timeLineDate = Timeline.init(timeLineDateOptions);
-            console.log(timeLineDate)
+            console.log(timeLineDate);
             for (var i = 0; i < buttonsDate.length; i += 1) {
                 buttonsDate[i].addEventListener('click', function () {
                     switch (this.getAttribute('data-type')) {
@@ -62,36 +67,43 @@
                             timeLineDate.setOption({
                                     section: [2012, 2018],
                                     slider: {
+                                        name:'',
                                         location: ['2015']
                                     }
                                 }
                             );
+                            dateType.year = timeLineDate.dataTime[0] +'-';
                             break;
                         case 'month':
                             changeDataAll([1, 12]);
                             timeLineDate.setOption({
                                     section: [1, 12],
                                     slider: {
+                                        name:dateType.year,
                                         location: ['6'],
                                     }
                                 }
                             );
+                            dateType.month = dateType.year + timeLineDate.dataTime[0] +'-';
                             break;
                         case 'day':
                             changeDataAll([1, 31]);
                             timeLineDate.setOption({
                                     section: [1, 31],
                                     slider: {
+                                        name:dateType.month,
                                         location: ['12', '23'],
                                     }
                                 }
                             );
+                            dateType.day = dateType.month + timeLineDate.dataTime[0] +' ';
                             break;
                         case 'hours':
                             changeDataAll([0, 24]);
                             timeLineDate.setOption({
                                     section: [0, 24],
                                     slider: {
+                                        name: dateType.day,
                                         location: ['5', '18'],
                                     }
                                 }

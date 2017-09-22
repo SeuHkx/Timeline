@@ -7,13 +7,51 @@
     <link rel="stylesheet" href="../wild.min.css"/>
     <link rel="stylesheet" href="../css/styles/index.css"/>
     <link rel="stylesheet" href="../css/timeline.css"/>
+    <style>
+        .range{
+            width: 1000px;
+        }
+    </style>
 </head>
 <body class="dark-body">
-<div class="container custom">
+<div class="container range">
     <div class="timeline-wrap">
-        <div class="timeline-custom" id="timeline-custom"></div>
+        <div class="timeline-range" id="timeline-range"></div>
     </div>
 </div>
 <script src="../timeline.js"></script>
+<script>
+    window.onload = function () {
+        var timeLineRangeOptions = {
+            axisType: 'average',
+            renderTo: 'timeline-range',
+            section: [0, 24],
+            precision:'minute',
+            axisStyle: {
+                height : 16,
+                bdSize:0,
+                bgColor: '#68686A',
+                radius:10
+            },
+            slider: {
+                location: [12,18],
+                template: '<div class="timeline-slide range"><span class="wd-triangle wd-triangle--bottom"></span><span class="tips">{{location}}</span></div>'
+            },
+            slidersArea:{
+                height:16,
+                position:'bottom',
+                bgColor:'rgba(204, 204, 204, 0.56)'
+            },
+            axisTicks:{
+                show:false
+            },
+            averageTicks:{
+                show:true
+            }
+        };
+        var timeLineRange = Timeline.init(timeLineRangeOptions);
+        console.log(timeLineRange);
+    }
+</script>
 </body>
 </html>

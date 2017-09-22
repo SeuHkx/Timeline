@@ -29,6 +29,13 @@
         this.options = {
             renderTo: '',
             section: [2012, 2017],
+            precision: 'default'||'minute'||'day'||'second',
+            averageTicks:{
+                show:false,
+                height: 8,
+                width: 1,
+                bgColor: '#000'
+            },
             slidersArea: {
                 drag:true,
                 show:true,
@@ -39,7 +46,8 @@
             slider: {
                 show: true,
                 text:true,
-                template: '<div class="timeline-slide"><div class="slide-tips">${location}</div><div class="slide"></div></div>',
+                name:'',
+                template: '<div class="timeline-slide"><div class="slide-tips">{{location}}</div><div class="slide"></div></div>',
                 location: ['2012-02', '2013'],
                 width: 14
             },
@@ -81,16 +89,17 @@
             element: null,
             sliders: null,
             slidersMirror:null,
-            width: this._axisTemplateWidth(),
+            totalWidth: this._axisTemplateWidth(),
             slidersArea: null,
             slidersAreaCalculationWidth: 0,
             recordPoint: [],
-            recordData: {}
+            recordData: {},
+            axisItemTicksWidth:(this.options.axisItemWidth - this.options.axisTicks.width)/12
         };
-        this._axisItemTicksWidth = (this.options.axisItemWidth - this.options.axisTicks.width)/12;
-        this.axisRecord = this._axisRecord();
+        this.dataTime = [];
+        //this.axisRecord = this._axisRecord();
         if (this.options.axisType === 'order') {
-            this.axis.element = Timeline.parseDom(this._axisTemplate(this.axis.width, true))[0];
+            this.axis.element = Timeline.parseDom(this._axisTemplate(this.axis.totalWidth, true))[0];
             this._render();
         }
         if (this.options.axisType === 'average') {
@@ -104,7 +113,8 @@
         };
         this.drag = function () {
         };
-        this.dataTime = [];
+        this.end  = function () {
+        };
         this.setOption = function (option) {
             if(this.options.axisType !== option.axisType && typeof option.axisType !== 'undefined'){
                 console.warn('axisType type must be the same');
@@ -123,7 +133,7 @@
             }
         };
     };
-    var TimelineMethods = {
+    var TimeLineMethods = {
         _renderTypeAverage: function () {
             var styles = {
                 position: 'relative',
@@ -135,6 +145,10 @@
             this._slider();
         },
         _axisUpdateTypeAverageOptions: function () {
+            var COVER_NUMBER = 1;
+            if(this.options.precision === 'minute'){
+                COVER_NUMBER = 0;
+            }
             try {
                 var renderToWidth = parseInt(getComputedStyle(this.axis.renderTo)['width']);
             } catch (e) {
@@ -142,18 +156,18 @@
             }
             this.axis.recordPoint = [];
             this.axis.recordData  = {};
-            this.axis.width = renderToWidth;
-            this.options.axisTicks.width = this.options.axisItemWidth = renderToWidth / (this.options.section[this.options.section.length - 1] - this.options.section[0] + 1);
+            this.axis.totalWidth = renderToWidth;
+            this.axis.axisItemTicksWidth = this.options.axisTicks.width = this.options.axisItemWidth = renderToWidth / (this.options.section[this.options.section.length - 1] - this.options.section[0] + COVER_NUMBER);
             this.axis.element = Timeline.parseDom(this._axisTemplate(renderToWidth, false))[0];
             this.axisRecord = this._axisRecord();
         },
         _renderTypeOrder:function () {
             this.axis.recordPoint = [];
             this.axis.recordData  = {};
-            this.axis.width   = this._axisTemplateWidth();
-            this.axis.element = Timeline.parseDom(this._axisTemplate(this.axis.width, true))[0];
+            this.axis.totalWidth   = this._axisTemplateWidth();
+            this.axis.element = Timeline.parseDom(this._axisTemplate(this.axis.totalWidth, true))[0];
+            this.axis.axisItemTicksWidth = (this.options.axisItemWidth - this.options.axisTicks.width)/12;
             this.axisRecord = this._axisRecord();
-            this._axisItemTicksWidth = (this.options.axisItemWidth - this.options.axisTicks.width)/12;
             this._render();
         },
         _render: function () {
@@ -163,6 +177,7 @@
                 width: '100%'
             };
             this._renderToStyle(styles);
+            this.axisRecord = this._axisRecord();
             if (this.options.slider.show) this._slider();
             this._axisDragInit();
         },
@@ -189,14 +204,14 @@
             }
         },
         _sliderCompileTemplate: function () {
-            var sliderReg = /\$\{\w+\}/g;
+            var sliderReg = /\{+\w+\}+/g;
             var sliderTemplate = '';
             if (this.options.slider.location.length === 1) {
-                sliderTemplate = this.options.slider.template.replace(sliderReg, this.options.slider.location[0]);
+                sliderTemplate = this.options.slider.template.replace(sliderReg, this.options.slider.name + this.options.slider.location[0]);
             }
             if (this.options.slider.location.length > 1) {
                 for (var i = 0; i < this.options.slider.location.length; i += 1) {
-                    sliderTemplate += this.options.slider.template.replace(sliderReg, this.options.slider.location[i]);
+                    sliderTemplate += this.options.slider.template.replace(sliderReg, this.options.slider.name + this.options.slider.location[i]);
                 }
             }
             return sliderTemplate;
@@ -214,10 +229,21 @@
                             that.slidersTipsRight = this._sliderScanTips(this.axis.slidersMirror, []).pop();
                             that.previous.pointX = that.element.offsetLeft;
                             that.lastPointX  = this.axisRecord[this.options.section[1]] - this.options.slider.width;
-                            this.axis.slidersAreaCalculationWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
+                            this.axis.slidersAreaCalculationWidth = parseFloat(getComputedStyle(this.axis.slidersArea)['width']);
                         }.bind(this),
                         limit: function (moveX, that) {
                             return this._sliderCommonLimitJudge('sliderArea',moveX, that, this._slidersAreaJudgeCallback);
+                        }.bind(this),
+                        end:function () {
+                            for(var j = 0; j < this.axis.slidersMirror.length; j += 1){
+                                var tips = this._sliderScanTips(this.axis.sliders[j].childNodes,[]);
+                                var data = this.axis.recordData[this.axisRecord[tips[0].innerHTML]];
+                                this.dataTime[j] = data;
+                            }
+                            if(typeof this.end === 'function'){
+                                this.dataTime.sort(Timeline.sortNumber);
+                                this.end(this.dataTime);
+                            }
                         }.bind(this)
                     });
                 }
@@ -228,13 +254,13 @@
             var distance = 0;
             if (that.previous.pointX < moveX) {
                 distance = moveX - that.previous.pointX;
-                this.axis.slidersMirror[1].style.left = parseInt(getComputedStyle(this.axis.slidersMirror[1])['left']) + distance + 'px';
-                this._slidersAreaJudgeData(parseInt(getComputedStyle(this.axis.slidersMirror[1])['left']),that);
+                this.axis.slidersMirror[1].style.left = parseFloat(getComputedStyle(this.axis.slidersMirror[1])['left']) + distance + 'px';
+                this._slidersAreaJudgeData(parseFloat(getComputedStyle(this.axis.slidersMirror[1])['left']),that);
             }
             if (that.previous.pointX > moveX) {
                 distance = that.previous.pointX - moveX;
-                this.axis.slidersMirror[1].style.left = (parseInt(this.axis.slidersArea.offsetLeft) + this.axis.slidersAreaCalculationWidth - this.options.slider.width/2) - distance + 'px' ;//
-                this._slidersAreaJudgeData(parseInt(getComputedStyle(this.axis.slidersMirror[1])['left']),that);
+                this.axis.slidersMirror[1].style.left = (parseFloat(this.axis.slidersArea.offsetLeft) + this.axis.slidersAreaCalculationWidth - this.options.slider.width/2) - distance + 'px' ;//
+                this._slidersAreaJudgeData(parseFloat(getComputedStyle(this.axis.slidersMirror[1])['left']),that);
             }
             that.previous.pointX = moveX;
             this.axis.slidersMirror[0].style.left = moveX - this.options.slider.width/2 + 'px';
@@ -247,25 +273,20 @@
                 if (pointArr[i][0] < moveX && moveX < pointArr[i][1]) {
                     var pointValue = '';
                     pointValue = this.axis.recordData[pointArr[i][0]];
-                    if(moveX > that.lastPointX){
-                        pointValue = this.axis.recordData[pointArr[i][1]];
-                    }
                     that.slidersTipsRight.innerHTML = pointValue;
                 }
             }
-            if(typeof this.dataTime[0] === 'undefined')this.dataTime[0] = this.options.slider.location[0];
-            if(typeof pointValue !== 'undefined')this.dataTime[1] = pointValue;
         },
         _sliderCommonLimitJudge: function (type,moveX, that, callback) {
             var limitLeft  = 0,
                 limitRight = 0;
             if(type === 'slider'){
                 limitLeft  = this.options.axisTicks.width / 2 - this.options.slider.width/2;
-                limitRight = this.axis.width - this.options.axisTicks.width / 2 - this.options.slider.width/2;
+                limitRight = this.axis.totalWidth - this.options.axisTicks.width / 2 - this.options.slider.width/2;
             }
             if(type === 'sliderArea'){
                 limitLeft  = this.options.axisTicks.width / 2;
-                limitRight = this.axis.width - this.options.axisTicks.width / 2 - this.axis.slidersAreaCalculationWidth;
+                limitRight = this.axis.totalWidth - this.options.axisTicks.width / 2 - this.axis.slidersAreaCalculationWidth;
             }
             moveX = moveX < limitLeft  ? limitLeft  : moveX;
             moveX = moveX > limitRight ? limitRight : moveX;
@@ -303,7 +324,7 @@
                 position: 'absolute',
                 top: positionTop + 'px',
                 width: this.axis.slidersAreaCalculationWidth + 'px',
-                left: this.axisRecord[this.options.slider.location[0]] + 'px',
+                left:  this.axisRecord[this.options.slider.location[0]] + this.options.slider.width/2 + 'px',
                 right: 0,
                 background: this.options.slidersArea.bgColor,
                 height: this.options.slidersArea.height + 'px'
@@ -320,8 +341,9 @@
             this._sliderInitDrag();
         },
         _sliderInitPosition:function (elements,index) {
-            elements['style']['left']  = this.axisRecord[this.options.slider.location[index]] - this.options.slider.width/2 + 1 + 'px';
+            elements['style']['left']  = this.axisRecord[this.options.slider.location[index]] + 'px';
             elements['style']['width'] = this.options.slider.width + 'px';
+            this.dataTime[index] = this.options.slider.location[index];
             this.axis.element.appendChild(elements);
         },
         _sliderInitDrag : function () {
@@ -345,11 +367,23 @@
                     }.bind(this),
                     limit: function (moveX, that) {
                         return this._sliderCommonLimitJudge('slider',moveX, that, this._sliderJudgeCallback);
+                    }.bind(this),
+                    end:function () {
+                        for(var j = 0; j < this.axis.sliders.length; j += 1){
+                            var tips = this._sliderScanTips(this.axis.sliders[j].childNodes,[]);
+                            var data = this.axis.recordData[this.axisRecord[tips[0].innerHTML]];
+                            this.dataTime[j] = data;
+                        }
+                        if(typeof this.end === 'function'){
+                            this.dataTime.sort(Timeline.sortNumber);
+                            this.end(this.dataTime);
+                        }
                     }.bind(this)
                 });
             }
         },
         _sliderJudgeCallback: function (moveX, that) {
+            var updateMoveX = parseFloat(getComputedStyle(that.element)['left']);
             if (that.slidersAreaLeft > that.previous.pointX && that.slidersAreaRight > that.previous.pointX) {
                 if (moveX > that.slidersAreaRight) {
                     this.axis.slidersArea.style.left  = that.slidersAreaRight + 'px';
@@ -369,26 +403,17 @@
                 }
             }
             //todo data
-            this._sliderJudgeData(moveX,that);
+            this._sliderJudgeData(updateMoveX,that);
         },
-        _sliderJudgeData:function (moveX,that) {
+        _sliderJudgeData:function (updateMove,that) {
             var pointGroup = Timeline.jointArrayGroup(this.axis.recordPoint);
             for (var i = 0; i < pointGroup.length; i += 1) {
-                if (pointGroup[i][0] < moveX && moveX < pointGroup[i][1]) {
+                if (pointGroup[i][0] <= updateMove && updateMove < pointGroup[i][1]) {
                     var pointValue = '';
                     pointValue = this.axis.recordData[pointGroup[i][0]];
-                    if(moveX > that.lastPointX){
-                        pointValue = this.axis.recordData[pointGroup[i][1]];
-                    }
-                    if(moveX === that.limitLeft){
-                        pointValue = this.axis.recordData[pointGroup[0][0]];
-                    }
                     that.slidersTips.innerHTML = pointValue;
                     this.drag(pointValue);
                 }
-            }
-            if(typeof pointValue !== 'undefined'){
-                this.dataTime[0] = pointValue;
             }
         },
         _sliderArrChange: function (array) {
@@ -513,8 +538,8 @@
             };
             var styles = {
                 ticks: Timeline.generateStyle(axisTicksStyles),
-                line: Timeline.generateStyle(axisTicksLineStyles),
-                text: Timeline.generateStyle(axisTicksTextStyles)
+                line : Timeline.generateStyle(axisTicksLineStyles),
+                text : Timeline.generateStyle(axisTicksTextStyles)
             };
             return styles;
         },
@@ -568,7 +593,7 @@
             var MONTH = 12;
             var positions = [];
             while (MONTH-- > 0) {
-                positions.push(MONTH * this._axisItemTicksWidth);
+                positions.push(MONTH * this.axis.axisItemTicksWidth);
             }
             return positions.reverse();
         },
@@ -609,8 +634,8 @@
             };
             var styles = {
                 ticks: Timeline.generateStyle(axisItemTicksStyles),
-                line: Timeline.generateStyle(axisItemTicksLineStyles),
-                text: Timeline.generateStyle(axisItemTicksTextStyles)
+                line : Timeline.generateStyle(axisItemTicksLineStyles),
+                text : Timeline.generateStyle(axisItemTicksTextStyles)
             };
             return styles;
         },
@@ -651,22 +676,69 @@
             }
             return axisDayOrder;
         },
+        _axisMinuteOrder:function () {
+            var MINUTE_NUMBER = 60;
+            var minute = [];
+            for(var i = 0 ; i < MINUTE_NUMBER; i += 1){
+                var m = i;
+                if(i < 10){
+                    m = '0' + i;
+                }
+                minute.push(m);
+            }
+            return minute;
+        },
         _axisRecord: function () {
             //year
             var sections = this._axisSectionOrder();
             var sectionsPoint = this._axisSectionPoint(sections);
-            //month
-            var month = this._axisMonthOrder();
-            var monthPoint = this._axisMonthPoint(sections,month);
-            //day
-            var day = this._axisDayOrder();
-            var dayPoint = this._axisDayPoint(monthPoint,day);
+            switch (this.options.precision){
+                case 'minute':
+                    var mark = ':';
+                    var precision = this._axisMinuteOrder();
+                    var precisionPoint = this._axisPrecisionPoint(sections,sectionsPoint,precision);
+                    break;
+                case 'day':
+                    var mark = '-';
+                    break;
+                case 'second':
+                    break;
+                default:
+                    break;
+            }
+            if(this.options.axisType === 'order'){
+                //month
+                var month = this._axisMonthOrder();
+                var monthPoint = this._axisMonthPoint(sections,month);
+                //day
+                var day = this._axisDayOrder();
+                var dayPoint = this._axisDayPoint(monthPoint,day);
+                //minute
+                var minute = this._axisMinuteOrder();
+                var minutePoint = this._axisMinutePoint(dayPoint,minute);
+            }
             //todo
             var axisRecord = {};
             for (var i = 0, l = sections.length; i < l; i += 1) {
-                axisRecord[sections[i]] = sectionsPoint[i];
-                this.axis.recordData[sectionsPoint[i] - this.options.slider.width/2] = sections[i].toString();
-                this.axis.recordPoint.push(sectionsPoint[i] - this.options.slider.width/2);
+                axisRecord[sections[i]] = sectionsPoint[i] - this.options.slider.width/2;
+                if(i !== 0) {
+                    this.axis.recordData[sectionsPoint[i] - this.options.slider.width/2] = this.options.slider.name + sections[i].toString(); // - this.options.slider.width/2
+                    this.axis.recordData[sectionsPoint[i] - this.options.slider.width] = this.options.slider.name + sections[i].toString(); // - this.options.slider.width/2
+                    this.axis.recordData[sectionsPoint[i]]= this.options.slider.name + sections[i].toString(); // - this.options.slider.width/2
+                    this.axis.recordPoint.push(sectionsPoint[i] - this.options.slider.width, sectionsPoint[i] - this.options.slider.width/2, sectionsPoint[i]);// - this.options.slider.width/2
+                }else{
+                    this.axis.recordData[sectionsPoint[i] - this.options.slider.width/2] = this.options.slider.name + sections[i].toString(); // - this.options.slider.width/2
+                    this.axis.recordData[sectionsPoint[i]]= this.options.slider.name + sections[i].toString(); // - this.options.slider.width/2
+                    this.axis.recordPoint.push(sectionsPoint[i] - this.options.slider.width/2,sectionsPoint[i]);// - this.options.slider.width/2
+                }
+                if(this.options.precision !== 'default'){
+                    if(i !== (sections.length - 1)){
+                        for(var o = 0; o < precision.length; o += 1){
+                            this.axis.recordData[precisionPoint[i][o] - this.options.slider.width/2] = sections[i].toString() + mark + precision[o];
+                            this.axis.recordPoint.push(precisionPoint[i][o] - this.options.slider.width/2);
+                        }
+                    }
+                }
                 if(this.options.axisType === 'order'){
                     if (i !== (sections.length - 1)) {
                         for (var m = 0; m < month.length; m += 1) {
@@ -684,12 +756,27 @@
                     }
                 }
             }
+            this.axis.recordPoint.sort(Timeline.sortNumber);
             return axisRecord;
+        },
+        _axisPrecisionPoint:function (sections,point,order) {
+            var axisPrecisionPoint = [];
+            for(var i = 0;i < sections.length; i += 1){
+                if(i !== (sections.length - 1)){
+                    var precisionPoints = [];
+                    for(var j = 0; j < order.length; j += 1){
+                        var precisionPoint = point[i] + (this.axis.axisItemTicksWidth/order.length)*j + (this.axis.axisItemTicksWidth/order.length)/2;
+                        precisionPoints.push(precisionPoint);
+                    }
+                    axisPrecisionPoint.push(precisionPoints);
+                }
+            }
+            return axisPrecisionPoint;
         },
         _axisSectionPoint: function (sections) {
             var positions = [];
             for(var i = 0 ; i < sections.length; i += 1){
-                var point = i * this.options.axisItemWidth + Math.ceil(this.options.axisTicks.width / 2);
+                var point = i * this.options.axisItemWidth + this.options.axisTicks.width/2;
                 positions.push(point);
             }
             return positions;
@@ -701,7 +788,7 @@
                 var pointMonth = [];
                 if (i !== (sections.length - 1)) {
                     for (var j = 0; j < month.length; j += 1) {
-                        var monthPoint = axisTicksPosition[i] + this.options.axisTicks.width + this._axisItemTicksWidth * j + Math.ceil(this._axisItemTicksWidth / 2);
+                        var monthPoint = axisTicksPosition[i] + this.options.axisTicks.width + this.axis.axisItemTicksWidth * j +this.axis.axisItemTicksWidth/2;
                         pointMonth.push(monthPoint);
                     }
                     axisMonthPoint.push(pointMonth);
@@ -717,7 +804,7 @@
                     var days = day[i][m];
                     var dayAllPoint = [];
                     for(var d = 0; d < days; d += 1){
-                        var dayWidth = parseFloat((this._axisItemTicksWidth/days).toFixed(2));
+                        var dayWidth = parseFloat((this.axis.axisItemTicksWidth/days).toFixed(2));
                         var dayWidthHalf = parseFloat((dayWidth/2).toFixed(2));
                         var dayPoint = monthPoint[i][m] + dayWidth * d + dayWidthHalf;
                         dayAllPoint.push(dayPoint);
@@ -727,19 +814,32 @@
                 axisDayPoint.push(daySplitPoint);
             }
             return axisDayPoint;
+        },
+        _axisMinutePoint: function (dayPoint,minute) {
+           //todo
+           //  var axisMinutePoint = [];
+           //  for(var i = 0 ; i < dayPoint.length; i += 1){
+           //      for(var j = 0; j < dayPoint[i].length; j += 1){
+           //          for(var d = 0; d < dayPoint[i][j].length; d += 1){
+           //              for(var m = 0; m < minute; m += 1){
+           //
+           //              }
+           //          }
+           //      }
+           //  }
         }
     };
     Timeline.Drag = function (element, options) {
         if (!(this instanceof Timeline.Drag)) {
             return new Timeline.Drag(element, options);
         }
-        this.elements = {
+        this.data = {
             element: element,
             pointX: 0,
             pointY: 0,
             previous: {
                 pointX: 0,
-                y: 0
+                pointY: 0
             },
             flag: false
         };
@@ -749,7 +849,9 @@
             end: null
         };
         for (var k in options) {
-            this.options[k] = options[k];
+            if(this.options.hasOwnProperty(k)){
+                this.options[k] = options[k];
+            }
         }
         this._dragInit();
     };
@@ -778,42 +880,58 @@
             this._dragEnd();
         },
         _dragStart: function () {
-            this.elements.element.addEventListener('mousedown', this, false)
+            this.data.element.id = 'TimelineDrag'+('drag' + Math.random()).replace(/\D/g, "");
+            this.data.element.addEventListener('mousedown', this, false)
         },
         _dragStartExecute: function (event) {
             event.cancelBubble = true;
             event.stopPropagation();
             event.target.setCapture && event.target.setCapture();
-            this.elements.flag = true;
-            this.elements.pointX = event.clientX - this.elements.element.offsetLeft;
-            if (this.options.start !== null && typeof this.options.start === 'function') this.options.start(this.elements);
+            this.data.flag = true;
+            this.data.pointX = event.clientX - this.data.element.offsetLeft;
+            if (this.options.start !== null && typeof this.options.start === 'function') this.options.start(this.data);
             return false;
         },
         _dragMove: function () {
             doc.addEventListener('mousemove', this, false);
         },
         _dragMoveExecute: function (event) {
-            if (!this.elements.flag)return false;
-            var moveX = event.clientX - this.elements.pointX;
-            var pointMoveX = this.options.limit !== null && typeof this.options.limit === 'function' ? this.options.limit(moveX, this.elements) : moveX;
-            this.elements.element['style']['left'] = pointMoveX + 'px';
+            if (!this.data.flag)return false;
+            var moveX = event.clientX - this.data.pointX;
+            var pointMoveX = this.options.limit !== null && typeof this.options.limit === 'function' ? this.options.limit(moveX, this.data) : moveX;
+            this.data.element['style']['left'] = pointMoveX + 'px';
             return false;
         },
         _dragEnd: function () {
             doc.addEventListener('mouseup', this, false);
             try {
-                this.elements.element.addEventListener('losecapture', this, false);
+                this.data.element.addEventListener('losecapture', this, false);
             } catch (e) {
                 console.warn('element is null or error!')
             }
         },
         _dragEndExecute: function (event) {
+            this._dragEndJudge(this.data.element,event.target,function (element) {
+                if(this.options.end !== null && typeof this.options.end === 'function') this.options.end(element,this.data);
+            });
             event.cancelBubble = true;
             event.stopPropagation();
-            var moveX = event.clientX - this.elements.pointX;
-            this.elements.flag = false;
-            this.elements.element.releaseCapture && this.elements.element.releaseCapture();
-            this.elements.previous.pointX = moveX;
+            this.data.flag = false;
+            this.data.element.releaseCapture && this.data.element.releaseCapture();
+            this.data.previous.pointX = event.clientX - this.data.pointX;
+        },
+        _dragEndJudge:function (element,target,fn) {
+            if(this.data.flag && target !== null){
+                if(element != target){
+                    if(target.nodeName.replace('#','') === 'document'){
+                        fn.call(this,element);
+                    }
+                    this._dragEndJudge(element,target.parentNode,fn);
+                }else if(element == target){
+                    fn.call(this,element);
+                    return true;
+                }
+            }
         }
     };
     Timeline.generateStyle = function (styles) {
@@ -862,10 +980,13 @@
         }
         return jointArrayGroup;
     };
+    Timeline.sortNumber = function (a,b) {
+          return a - b;
+    };
     Timeline.isObject = function () {
         var arg = [].slice.call(arguments)[0];
         return Object.prototype.toString.call(arg) === '[object Object]';
     };
-    Timeline.copy(timeLine.prototype, TimelineMethods);
+    Timeline.copy(timeLine.prototype, TimeLineMethods);
     return Timeline();
 }));

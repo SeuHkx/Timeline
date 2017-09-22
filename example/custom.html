@@ -38,7 +38,7 @@
             },
             slider: {
                 location: [-8,30],
-                template: '<div class="timeline-slide custom"><span class="wd-triangle wd-triangle--bottom"></span><span class="tips">${location}</span></div>'
+                template: '<div class="timeline-slide custom"><span class="wd-triangle wd-triangle--bottom"></span><span class="tips">{{location}}</span></div>'
             },
             slidersArea:{
                 height:16,
@@ -50,6 +50,9 @@
             }
         };
         var timeLineCustom = Timeline.init(timeLineCustomOptions);
+        timeLineCustom.end = function (data) {
+            console.log('data:' + data)
+        };
         console.log(timeLineCustom)
     }
 </script>

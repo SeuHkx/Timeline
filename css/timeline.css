@@ -13,10 +13,10 @@
     -webkit-user-select: none;
     user-select: none;
 }
-.timeline-slide.custom{
+.timeline-slide.custom,.timeline-slide.range{
     top:-13px;
 }
-.timeline-slide.custom .wd-triangle--bottom{
+.timeline-slide.custom .wd-triangle--bottom,.timeline-slide.range .wd-triangle--bottom{
     border-right: 7px solid transparent;
     border-right: .07rem solid transparent;
     border-left: 7px solid transparent;
@@ -80,6 +80,11 @@
     margin-left: -15px;
     text-align: center;
     color: #fff;
+}
+.timeline-slide.range .tips{
+    margin-left: -30px;
+    width: 60px;
+    text-align: center;
 }
 .slide-tips:after{
     display:block;
