@@ -175,6 +175,9 @@
                 ]
             };
             charts.setOption(option);
+            timeLineDate.end = function (data) {
+                console.log(timeLineDate.dataTime,data)
+            }
             timeLineDate.drag = function (data) {
                 charts.setOption({
                     series:[

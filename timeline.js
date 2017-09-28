@@ -47,11 +47,12 @@
                 show: true,
                 text:true,
                 name:'',
-                template: '<div class="timeline-slide"><div class="slide-tips">{{location}}</div><div class="slide"></div></div>',
+                template: '<div class="timeline-slide"><div class="slide-tips" t-slider="$location">{{value}}</div><div class="slide"></div></div>',
                 location: ['2012-02', '2013'],
                 width: 14
             },
             axisType: 'order' || 'average',
+            animation:true,
             axisStyle: {
                 height:1,
                 bgColor: 'transparent',
@@ -94,6 +95,7 @@
             slidersAreaCalculationWidth: 0,
             recordPoint: [],
             recordData: {},
+            ticksId:null,
             axisItemTicksWidth:(this.options.axisItemWidth - this.options.axisTicks.width)/12
         };
         this.dataTime = [];
@@ -154,6 +156,7 @@
             } catch (e) {
                 console.warn('renderTo is error or renderTo is null')
             }
+            this.dataTime = [];
             this.axis.recordPoint = [];
             this.axis.recordData  = {};
             this.axis.totalWidth = renderToWidth;
@@ -162,6 +165,7 @@
             this.axisRecord = this._axisRecord();
         },
         _renderTypeOrder:function () {
+            this.dataTime = [];
             this.axis.recordPoint = [];
             this.axis.recordData  = {};
             this.axis.totalWidth   = this._axisTemplateWidth();
@@ -199,19 +203,29 @@
                     this.axis.renderTo.style[style] = styles[style];
                 }
                 this.axis.renderTo.appendChild(this.axis.element);
+                if(this.options.animation && this.options.axisType === 'average'){
+                    var ticks = doc.getElementById(this.axis.ticksId).childNodes;
+                    var positions = this._axisTicksPosition();
+                    setTimeout(function () {
+                        for(var i = 0 ; i < ticks.length; i += 1){
+                            ticks[i]['style']['left'] = positions[i] + 'px';
+                        }
+                    },100);
+                }
             } catch (e) {
                 console.warn('renderTo is error or renderTo is null')
             }
         },
         _sliderCompileTemplate: function () {
             var sliderReg = /\{+\w+\}+/g;
+            var sliderLocationReg = /\$\w+/g;
             var sliderTemplate = '';
             if (this.options.slider.location.length === 1) {
-                sliderTemplate = this.options.slider.template.replace(sliderReg, this.options.slider.name + this.options.slider.location[0]);
+                sliderTemplate = this.options.slider.template.replace(sliderReg, this.options.slider.name + this.options.slider.location[0]).replace(sliderLocationReg, this.options.slider.location[0]);
             }
             if (this.options.slider.location.length > 1) {
                 for (var i = 0; i < this.options.slider.location.length; i += 1) {
-                    sliderTemplate += this.options.slider.template.replace(sliderReg, this.options.slider.name + this.options.slider.location[i]);
+                    sliderTemplate += this.options.slider.template.replace(sliderReg, this.options.slider.name + this.options.slider.location[i]).replace(sliderLocationReg, this.options.slider.location[i]);
                 }
             }
             return sliderTemplate;
@@ -237,7 +251,7 @@
                         end:function () {
                             for(var j = 0; j < this.axis.slidersMirror.length; j += 1){
                                 var tips = this._sliderScanTips(this.axis.sliders[j].childNodes,[]);
-                                var data = this.axis.recordData[this.axisRecord[tips[0].innerHTML]];
+                                var data = this.axis.recordData[this.axisRecord[tips[0].getAttribute('t-slider')]];
                                 this.dataTime[j] = data;
                             }
                             if(typeof this.end === 'function'){
@@ -273,6 +287,10 @@
                 if (pointArr[i][0] < moveX && moveX < pointArr[i][1]) {
                     var pointValue = '';
                     pointValue = this.axis.recordData[pointArr[i][0]];
+                    that.slidersTipsRight.setAttribute('t-slider',pointValue);
+                    if(this.options.slider.name !== ''){
+                        pointValue = this.options.slider.name + pointValue;
+                    }
                     that.slidersTipsRight.innerHTML = pointValue;
                 }
             }
@@ -371,7 +389,7 @@
                     end:function () {
                         for(var j = 0; j < this.axis.sliders.length; j += 1){
                             var tips = this._sliderScanTips(this.axis.sliders[j].childNodes,[]);
-                            var data = this.axis.recordData[this.axisRecord[tips[0].innerHTML]];
+                            var data = this.axis.recordData[this.axisRecord[tips[0].getAttribute('t-slider')]];
                             this.dataTime[j] = data;
                         }
                         if(typeof this.end === 'function'){
@@ -411,6 +429,10 @@
                 if (pointGroup[i][0] <= updateMove && updateMove < pointGroup[i][1]) {
                     var pointValue = '';
                     pointValue = this.axis.recordData[pointGroup[i][0]];
+                    that.slidersTips.setAttribute('t-slider',pointValue);
+                    if(this.options.slider.name !== ''){
+                        pointValue = this.options.slider.name + pointValue;
+                    }
                     that.slidersTips.innerHTML = pointValue;
                     this.drag(pointValue);
                 }
@@ -499,14 +521,21 @@
                 var stylesTicks = this._axisTicksTemplateStyle(i);
                 axisTicks += '<div style="' + stylesTicks.ticks + '"><div style="' + stylesTicks.line + '"></div><div style="' + stylesTicks.text + '">' + sections[i] + '</div></div>' + fn(i, sectionArea) + '';
             }
-            return axisTicks;
+            this.axis.ticksId = 'TimelineTciks'+('ticks' + Math.random()).replace(/\D/g, "");
+            return '<div id="'+ this.axis.ticksId +'">'+ axisTicks +'</div>';
         },
         _axisTicksTemplateStyle: function (index) {
-            var positions = this._axisTicksPosition();
+            var positions = 0;
+            if(this.options.axisType === 'order'){
+                positions = this._axisTicksPosition()[index];
+            }
+            if(this.options.axisType === 'average' && this.options.animation){
+                positions = this.axis.totalWidth/2 - this.axis.axisItemTicksWidth/2;
+            }
             var axisTicksStyles = {
                 position: 'absolute;',
                 width: this.options.axisTicks.width + 'px;',
-                left: positions[index] + 'px;',
+                left: positions + 'px;',
                 fontSize: {
                     name: 'font-size',
                     value: this.options.axisTicks.fontSize + 'px;'
@@ -722,13 +751,13 @@
             for (var i = 0, l = sections.length; i < l; i += 1) {
                 axisRecord[sections[i]] = sectionsPoint[i] - this.options.slider.width/2;
                 if(i !== 0) {
-                    this.axis.recordData[sectionsPoint[i] - this.options.slider.width/2] = this.options.slider.name + sections[i].toString(); // - this.options.slider.width/2
-                    this.axis.recordData[sectionsPoint[i] - this.options.slider.width] = this.options.slider.name + sections[i].toString(); // - this.options.slider.width/2
-                    this.axis.recordData[sectionsPoint[i]]= this.options.slider.name + sections[i].toString(); // - this.options.slider.width/2
+                    this.axis.recordData[sectionsPoint[i] - this.options.slider.width/2] = sections[i].toString();//this.options.slider.name + sections[i].toString(); // - this.options.slider.width/2
+                    this.axis.recordData[sectionsPoint[i] - this.options.slider.width] =   sections[i].toString();//this.options.slider.name + sections[i].toString(); // - this.options.slider.width/2
+                    this.axis.recordData[sectionsPoint[i]]= sections[i].toString();//this.options.slider.name + sections[i].toString(); // - this.options.slider.width/2
                     this.axis.recordPoint.push(sectionsPoint[i] - this.options.slider.width, sectionsPoint[i] - this.options.slider.width/2, sectionsPoint[i]);// - this.options.slider.width/2
                 }else{
-                    this.axis.recordData[sectionsPoint[i] - this.options.slider.width/2] = this.options.slider.name + sections[i].toString(); // - this.options.slider.width/2
-                    this.axis.recordData[sectionsPoint[i]]= this.options.slider.name + sections[i].toString(); // - this.options.slider.width/2
+                    this.axis.recordData[sectionsPoint[i] - this.options.slider.width/2] = sections[i].toString();//this.options.slider.name + sections[i].toString(); // - this.options.slider.width/2
+                    this.axis.recordData[sectionsPoint[i]]= sections[i].toString();//this.options.slider.name + sections[i].toString(); // - this.options.slider.width/2
                     this.axis.recordPoint.push(sectionsPoint[i] - this.options.slider.width/2,sectionsPoint[i]);// - this.options.slider.width/2
                 }
                 if(this.options.precision !== 'default'){
