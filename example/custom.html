@@ -7,21 +7,23 @@
     <link rel="stylesheet" href="../wild.min.css"/>
     <link rel="stylesheet" href="../css/styles/index.css"/>
     <link rel="stylesheet" href="../css/timeline.css"/>
+    <style>
+        .wd-triangle{
+            position: absolute;
+            left: 50%;
+            margin-left: -7px;
+        }
+        .container.custom{
+            width: 280px;
+        }
+    </style>
 </head>
 <body class="dark-body">
 <div class="container custom">
     <div class="timeline-wrap">
-        <div class="timeline-custom" id="timeline-custom">
-            <div class="wd-grid--fluid custom-text">
-                <div class="wd-grid-2 wd-typo-text--center">-50</div>
-                <div class="wd-grid-2 wd-typo-text--center">-30</div>
-                <div class="wd-grid-2 wd-typo-text--center">-20</div>
-                <div class="wd-grid-2 wd-typo-text--center">10</div>
-                <div class="wd-grid-2 wd-typo-text--center">30</div>
-                <div class="wd-grid-2 wd-typo-text--center">50</div>
-            </div>
-        </div>
+        <div class="timeline-custom" id="timeline-custom"></div>
     </div>
+    <!--<span class="wd-triangle wd-triangle--bottom"></span>-->
 </div>
 <script src="../timeline.js"></script>
 <script>
@@ -37,21 +39,23 @@
                 radius:10
             },
             slider: {
-                location: [-8,30],
-                template: '<div class="timeline-slide custom"><span class="wd-triangle wd-triangle--bottom"></span><span class="tips" t-slider="{{value}}">{{location}}</span></div>'
+                width:1,
+                location: [-30,40],
+                template: '<div class="timeline-slide custom"><span class="wd-triangle wd-triangle--bottom"></span><span class="tips" t-slider="$location">{{value}}</span></div>'
             },
             slidersArea:{
                 height:16,
                 position:'bottom',
                 bgColor:'-webkit-linear-gradient(left, #607ad9 0%,#935fa9 50%,#bb487f 100%)'
             },
+            animation:false,
             axisTicks:{
                 show:false
             }
         };
         var timeLineCustom = Timeline.init(timeLineCustomOptions);
         timeLineCustom.end = function (data) {
-            console.log('data:' + data)
+            console.log(data)
         };
         console.log(timeLineCustom)
     }

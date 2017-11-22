@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="../css/timeline.css"/>
     <style>
         .range{
-            width: 1000px;
+            width: 300px;
         }
     </style>
 </head>
@@ -25,7 +25,7 @@
         var timeLineRangeOptions = {
             axisType: 'average',
             renderTo: 'timeline-range',
-            section: [0, 24],
+            section: [0, 23],
             precision:'minute',
             axisStyle: {
                 height : 16,
@@ -34,14 +34,16 @@
                 radius:10
             },
             slider: {
+                width:2,
                 location: [12,18],
-                template: '<div class="timeline-slide range"><span class="wd-triangle wd-triangle--bottom"></span><span class="tips">{{location}}</span></div>'
+                template: '<div class="timeline-slide range"><span class="wd-triangle wd-triangle--bottom"></span><span class="tips" t-slider="$location">{{value}}</span></div>'
             },
             slidersArea:{
                 height:16,
                 position:'bottom',
                 bgColor:'rgba(204, 204, 204, 0.56)'
             },
+            animation:false,
             axisTicks:{
                 show:false
             },

@@ -15,6 +15,7 @@
 </head>
 <body>
     <div class="container">
+
         <div class="timeline-wrap charts-wrap" id="charts"></div>
         <div class="timeline-wrap">
             <div class="wd-button-group wd-utils-right" id="buttonsDate">
@@ -41,9 +42,11 @@
             var timeLineDateOptions = {
                 axisType: 'average',
                 renderTo: 'timeline-module',
-                section: [2012, 2018],
+                section: [0, 23],
+                slice:2,
                 slider: {
-                    location: ['2015','2016']
+                    location: [1,2],
+                    name:'18-'
                 },
                 axisTicksLineStyle: {
                     height: 12,
@@ -66,45 +69,45 @@
                             changeDataAll([2012, 2018]);
                             timeLineDate.setOption({
                                     section: [2012, 2018],
+                                    slice:1,
                                     slider: {
                                         name:'',
                                         location: ['2015']
                                     }
                                 }
                             );
-                            dateType.year = timeLineDate.dataTime[0] +'-';
+                            console.log(timeLineDate)
                             break;
                         case 'month':
                             changeDataAll([1, 12]);
                             timeLineDate.setOption({
                                     section: [1, 12],
                                     slider: {
-                                        name:dateType.year,
-                                        location: ['6'],
+                                        name:'',
+                                        location: [6]
                                     }
                                 }
                             );
-                            dateType.month = dateType.year + timeLineDate.dataTime[0] +'-';
                             break;
                         case 'day':
                             changeDataAll([1, 31]);
                             timeLineDate.setOption({
                                     section: [1, 31],
+                                    slice:1,
                                     slider: {
-                                        name:dateType.month,
-                                        location: ['12', '23'],
+                                        name:[],
+                                        location: []
                                     }
                                 }
                             );
-                            dateType.day = dateType.month + timeLineDate.dataTime[0] +' ';
                             break;
                         case 'hours':
                             changeDataAll([0, 24]);
                             timeLineDate.setOption({
                                     section: [0, 24],
                                     slider: {
-                                        name: dateType.day,
-                                        location: ['5', '18'],
+                                        name: [],
+                                        location: []
                                     }
                                 }
                             );
@@ -176,8 +179,8 @@
             };
             charts.setOption(option);
             timeLineDate.end = function (data) {
-                console.log(timeLineDate.dataTime,data)
-            }
+                //console.log(timeLineDate.dataTime,data)
+            };
             timeLineDate.drag = function (data) {
                 charts.setOption({
                     series:[

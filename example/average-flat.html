@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>flat</title>
+    <link rel="stylesheet" href="../wild.min.css"/>
+    <link rel="stylesheet" href="../css/styles/index.css"/>
+    <link rel="stylesheet" href="../css/timeline.css"/>
+</head>
+<body>
+<style>
+    body{
+        background-color: #000;
+    }
+    .timeline-module{
+        top:100px;
+    }
+</style>
+<div class="container">
+    <div class="timeline-wrap">
+        <div class="timeline-module" id="timeline-module"></div>
+    </div>
+</div>
+<script src="../timeline.js"></script>
+<script>
+    window.onload = function () {
+        var timeLineDateOptions = {
+            axisType: 'average',
+            renderTo: 'timeline-module',
+            section: [0, 23],
+            animation:false,
+            slider: {
+                width:10,
+                location: [4,10],
+                template: '<div class="timeline-slide flat"><span class="tips flat" t-slider="$location">{{value}}</span></div>'
+            },
+            slidersArea:{
+                height:30,
+                position:'bottom',
+                bgColor:'rgb(45, 45, 45)'
+            },
+            axisStyle: {
+                height : 32,
+                bdSize:1,
+                bdDirection:'all',
+                bgColor: '#000',
+                radius:2
+            },
+            axisTicks:{
+                show:false
+            }
+        };
+        var timeLineDate = Timeline.init(timeLineDateOptions);
+    }
+</script>
+</body>
+</html>
