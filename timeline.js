@@ -28,9 +28,13 @@
         }
         this.options = {
             renderTo: '',
-            section: [2012, 2017],
+            section: [],
             //axisType:average is effective
-            precision: 'default'||'minute'||'day'||'second',
+            precision: 'default'||'minute'||'day'||'second'||'month'||'hours',
+            //precision is effective
+            interval:0,
+            // must interval > 0 && precision === 'hours'
+            intervalCurrent:false,
             //axisType:average is effective
             slice:1,
             averageTicks:{
@@ -79,7 +83,7 @@
                 width: 1,
                 bgColor: '#bfbfbf'
             },
-            axisItemWidth: 700,
+            axisItemWidth: 800,
             axisItemTicksStyle: {
                 fontSize: 12,
                 height: 16,
@@ -101,10 +105,21 @@
             recordPoint: [],
             recordData: {},
             ticksId:null,
-            axisItemTicksWidth:(this.options.axisItemWidth - this.options.axisTicks.width)/12
+            axisItemTicksWidth:(this.options.axisItemWidth - this.options.axisTicks.width)/12,
+            intervalDate:{
+                year :0,
+                month:0,
+                day  :0,
+                crossYear:false,
+                crossMonth:false
+            }
         };
         this.axis.sliderTarget = 1;
         this.dataTime = [];
+        //interval
+        if(this.options.interval > 0 && this.options.precision === 'hours'){
+            this.options.section = this._axisPrecisionDaySection(this.options.section);
+        }
         //this.axisRecord = this._axisRecord();
         if (this.options.axisType === 'order') {
             this.axis.element = Timeline.parseDom(this._axisTemplate(this.axis.totalWidth, true))[0];
@@ -113,6 +128,39 @@
         if (this.options.axisType === 'average') {
             this._renderTypeAverage();
         }
+        this.disabled = false;
+        this.calculationGetDateSection = function(){
+            var precision = this._initAxisPrecisionDaySection();
+            var sections  = [];
+            var sectionsDate = [];
+            var starDate = precision.section[0];
+            var endDate  = precision.section[1];
+            if((endDate-starDate)>0){
+                if((precision.intervalDate.day - starDate) >= 0){
+                    for(;starDate <= endDate;){
+                        sectionsDate.push(starDate);
+                        starDate++;
+                    }
+                    sections = sections.concat(sectionsDate);
+                }
+                sections = this._precisionGetDaySectionAndHours(sections,precision);
+                return sections;
+            }
+            if((endDate-starDate)<0){
+                if((precision.intervalDate.day - starDate) >= 0){
+                    for(;starDate <= precision.intervalDate.day;){
+                        sectionsDate.push(starDate);
+                        starDate++;
+                    }
+                    for(var i = 1; i <= endDate;i+=1){
+                        sectionsDate.push(i);
+                    }
+                    sections = sections.concat(sectionsDate);
+                }
+                sections = this._precisionGetDaySectionAndHours(sections,precision);
+                return sections;
+            }
+        };
         this.drag = function () {
         };
         this.end  = function () {
@@ -128,6 +176,10 @@
                 console.warn('renderTo is error or renderTo is null')
             }
             Timeline.extends(this.options, option);
+            //interval
+            if(this.options.interval > 0 && this.options.precision === 'hours'){
+                this.options.section = this._axisPrecisionDaySection(this.options.section);
+            }
             if (this.options.axisType === 'order') {
                 this._renderTypeOrder();
             } else {
@@ -148,9 +200,12 @@
         },
         _axisUpdateTypeAverageOptions: function () {
             var COVER_NUMBER = 1;
-            // if(this.options.precision === 'minute'){
-            //     COVER_NUMBER = 0;
-            // }
+            var sectionArea  = '';
+            if(this.options.interval > 0 && this.options.precision === 'hours'){
+                sectionArea  = this.options.interval;
+            }else{
+                sectionArea  = ((this.options.section[this.options.section.length - 1] - this.options.section[0] + COVER_NUMBER)*this.options.slice);
+            }
             try {
                 var renderToWidth = parseInt(getComputedStyle(this.axis.renderTo)['width']);
             } catch (e) {
@@ -160,7 +215,7 @@
             this.axis.recordPoint = [];
             this.axis.recordData  = {};
             this.axis.totalWidth = renderToWidth;
-            this.axis.axisItemTicksWidth = this.options.axisTicks.width = this.options.axisItemWidth = renderToWidth / ((this.options.section[this.options.section.length - 1] - this.options.section[0] + COVER_NUMBER)*this.options.slice);
+            this.axis.axisItemTicksWidth = this.options.axisTicks.width = this.options.axisItemWidth = renderToWidth / sectionArea;
             this.axis.element = Timeline.parseDom(this._axisTemplate(renderToWidth, false))[0];
             this.axisRecord = this._axisRecord();
         },
@@ -171,17 +226,22 @@
             this.axis.totalWidth  = this._axisTemplateWidth();
             this.axis.element = Timeline.parseDom(this._axisTemplate(this.axis.totalWidth, true))[0];
             this.axis.axisItemTicksWidth = (this.options.axisItemWidth - this.options.axisTicks.width)/12;
-            this.axisRecord = this._axisRecord();
+            //this.axisRecord = this._axisRecord();
             this._render();
         },
         _render: function () {
             var styles = {
                 position: 'relative',
-                overflow: 'hidden',
+                // overflow: 'hidden',
                 width: '100%'
             };
             this._renderToStyle(styles);
             this.axisRecord = this._axisRecord();
+            var visualArea = parseInt(getComputedStyle(this.axis.renderTo,null)['width']);
+            var sliderPosition = this.axisRecord[this.options.slider.location[0]];
+            if(visualArea < sliderPosition){
+                this.axis.element.style.left = -(sliderPosition - visualArea/2) + 'px';
+            }
             if (this.options.slider.show) this._slider();
             this._axisDragInit();
         },
@@ -254,13 +314,14 @@
                             this.axis.slidersAreaCalculationWidth = parseFloat(getComputedStyle(this.axis.slidersArea)['width']);
                         }.bind(this),
                         limit: function (moveX, that) {
-                            return this._sliderCommonLimitJudge('sliderArea',moveX, that, this._slidersAreaJudgeCallback);
+                            return this.disabled ? '':this._sliderCommonLimitJudge('sliderArea',moveX, that, this._slidersAreaJudgeCallback);
                         }.bind(this),
                         end:function () {
+                            if(this.disabled)return false;
                             for(var j = 0; j < this.axis.slidersMirror.length; j += 1){
                                 var tips = this._sliderScanTips(this.axis.sliders[j].childNodes,[]);
-                                var data = this.axis.recordData[this.axisRecord[tips[0].getAttribute('t-slider')]];
-                                this.dataTime[j] = data;
+                                //var data = this.axis.recordData[this.axisRecord[tips[0].getAttribute('t-slider')]];
+                                this.dataTime[j] = tips[0].getAttribute('t-slider');
                             }
                             if(typeof this.end === 'function'){
                                 this.dataTime.sort(Timeline.sortNumber);
@@ -307,12 +368,20 @@
             var limitLeft  = 0,
                 limitRight = 0;
             if(type === 'slider'){
+                if(this.options.interval > 0 && this.options.precision === 'hours'){
+                    limitRight = this.axis.totalWidth;
+                }else {
+                    limitRight = this.axis.totalWidth - this.options.axisTicks.width / 2 - this.options.slider.width/2;
+                }
                 limitLeft  = this.options.axisTicks.width / 2 - this.options.slider.width/2;
-                limitRight = this.axis.totalWidth - this.options.axisTicks.width / 2 - this.options.slider.width/2;
             }
             if(type === 'sliderArea'){
+                if(this.options.interval > 0 && this.options.precision === 'hours'){
+                    limitRight = this.axis.totalWidth - this.axis.slidersAreaCalculationWidth;
+                }else {
+                    limitRight = this.axis.totalWidth - this.options.axisTicks.width / 2 - this.axis.slidersAreaCalculationWidth;
+                }
                 limitLeft  = this.options.axisTicks.width / 2;
-                limitRight = this.axis.totalWidth - this.options.axisTicks.width / 2 - this.axis.slidersAreaCalculationWidth;
             }
             moveX = moveX < limitLeft  ? limitLeft  : moveX;
             moveX = moveX > limitRight ? limitRight : moveX;
@@ -385,19 +454,21 @@
                         that.previous.pointX = this._sliderScanParent(that.slidersTips,[]).shift().offsetLeft;
                         //that.lastPointX = this.axisRecord[this.options.section[1]] - this.options.slider.width;
                         if(this.axis.slidersArea!== null){
-                            that.slidersAreaCalculationWidth = parseInt(getComputedStyle(this.axis.slidersArea)['width']);
+                            that.slidersAreaCalculationWidth = Number((getComputedStyle(this.axis.slidersArea)['width']).replace(/px/,''));
                             that.slidersAreaLeft  = this.axis.slidersArea.offsetLeft;
                             that.slidersAreaRight = that.slidersAreaCalculationWidth + that.slidersAreaLeft;
                         }
                     }.bind(this),
                     limit: function (moveX, that) {
-                        return this._sliderCommonLimitJudge('slider',moveX, that, this._sliderJudgeCallback);
+                        return this.disabled ? '':this._sliderCommonLimitJudge('slider',moveX, that, this._sliderJudgeCallback);
                     }.bind(this),
                     end:function () {
+                        if(this.disabled)return false;
                         for(var j = 0; j < this.axis.sliders.length; j += 1){
                             var tips = this._sliderScanTips(this.axis.sliders[j].childNodes,[]);
-                            var data = this.axis.recordData[this.axisRecord[tips[0].getAttribute('t-slider')]];
-                            this.dataTime[j] = data;
+                            //var data = this.axis.recordData[this.axisRecord[tips[0].getAttribute('t-slider')]];
+                            this.dataTime[j] = tips[0].getAttribute('t-slider');
+                            //this.dataTime[j] = data;
                         }
                         if(typeof this.end === 'function'){
                             this.dataTime.sort(Timeline.sortNumber);
@@ -418,7 +489,8 @@
                     this.axis.slidersArea.style.left  = moveX + this.options.slider.width/2 + 'px';
                 }
             }
-            if (that.slidersAreaRight >= that.previous.pointX && that.previous.pointX > that.slidersAreaLeft) {
+            //that.slidersAreaRight <= that.previous.pointX && that.previous.pointX > that.slidersAreaLeft
+            if (that.previous.pointX > that.slidersAreaLeft) {
                 if (moveX < that.slidersAreaLeft) {
                     this.axis.slidersArea.style.width = that.slidersAreaLeft - moveX - this.options.slider.width/2 + 'px';
                     this.axis.slidersArea.style.left  = moveX + this.options.slider.width/2 + 'px';
@@ -540,7 +612,8 @@
             }
             var axisTicks = '';
             var sections = this._axisSectionOrder();
-            var sectionArea = this.options.axisType === 'average'?(this.options.section[this.options.section.length - 1] - this.options.section[0] + 1)*this.options.slice:this.options.section[this.options.section.length - 1] - this.options.section[0] + 1;
+            
+            var sectionArea = this.options.axisType === 'average'? (this.options.interval > 0 ? this.options.interval : (this.options.section[this.options.section.length - 1] - this.options.section[0] + 1)*this.options.slice):this.options.section[this.options.section.length - 1] - this.options.section[0] + 1;
             for (var i = 0; i < sectionArea; i += 1) {
                 var stylesTicks = this._axisTicksTemplateStyle(i);
                 axisTicks += '<div style="' + stylesTicks.ticks + '"><div style="' + stylesTicks.line + '"></div><div style="' + stylesTicks.text + '">' + sections[i] + '</div></div>' + fn(i, sectionArea) + '';
@@ -597,7 +670,7 @@
             return styles;
         },
         _axisTicksPosition: function () {
-            var section = this.options.axisType === 'average'?(this.options.section[this.options.section.length - 1] - this.options.section[0] + 1)*this.options.slice:this.options.section[this.options.section.length - 1] - this.options.section[0] + 1;
+            var section = this.options.axisType === 'average'?this.options.interval >0?this.options.interval:(this.options.section[this.options.section.length - 1] - this.options.section[0] + 1)*this.options.slice:this.options.section[this.options.section.length - 1] - this.options.section[0] + 1;
             var positions = [];
             while (section-- > 0) {
                 positions.push(section * this.options.axisItemWidth);
@@ -693,18 +766,48 @@
             return styles;
         },
         _axisSectionOrder: function () {
-            var sectionTotal = this.options.section[this.options.section.length - 1] - this.options.section[0];
-            var sections = [];
-            var index = 0;
-            while (sectionTotal-- >= 0) {
-                sections.push(this.options.section[0] + index++);
-            }
-            if(this.options.axisType === 'average' && this.options.slice > 1){
-                for(var i = 1; i < this.options.slice; i += 1){
-                    sections = sections.concat(sections);
+            if(this.options.interval > 0 && this.options.precision === 'hours'){
+                var sections  = [];
+                var sectionsDate = [];
+                var startDate = this.options.section[0];
+                var endDate  = this.options.section[1];
+                if((endDate-startDate)>0){
+                    if((this.axis.intervalDate.day - startDate) >= 0){
+                        for(;startDate <= endDate;){
+                            sectionsDate.push(startDate);
+                            startDate++;
+                        }
+                        sections = sections.concat(sectionsDate);
+                    }
+                    return sections;
                 }
+                if((endDate-startDate)<0){
+                    if((this.axis.intervalDate.day - startDate) >= 0){
+                        for(;startDate <= this.axis.intervalDate.day;){
+                            sectionsDate.push(startDate);
+                            startDate++;
+                        }
+                        for(var i = 1; i <= endDate;i+=1){
+                            sectionsDate.push(i);
+                        }
+                        sections = sections.concat(sectionsDate);
+                    }
+                    return sections;
+                }
+            }else{
+                var sectionTotal = this.options.section[this.options.section.length - 1] - this.options.section[0];
+                var sections = [];
+                var index = 0;
+                while (sectionTotal-- >= 0) {
+                    sections.push(this.options.section[0] + index++);
+                }
+                if(this.options.axisType === 'average' && this.options.slice > 1){
+                    for(var i = 1; i < this.options.slice; i += 1){
+                        sections = sections.concat(sections);
+                    }
+                }
+                return sections;
             }
-            return sections;
         },
         _axisMonthOrder: function () {
             var month = [];
@@ -734,6 +837,18 @@
             }
             return axisDayOrder;
         },
+        _axisHoursOrder:function () {
+            var hours = [];
+            for (var i = 0; i <= 23; i += 1) {
+                if (i < 10) {
+                    var ii = '0' + i.toString();
+                    hours.push(ii);
+                } else {
+                    hours.push(i);
+                }
+            }
+            return hours;
+        },
         _axisMinuteOrder:function () {
             var MINUTE_NUMBER = 60;
             var minute = [];
@@ -746,10 +861,188 @@
             }
             return minute;
         },
+        _axisPrecisionDayOrder:function () {
+            var date = new Date();
+            var YEAR = date.getFullYear();
+            var MONTH_NUMBER = 12;
+            var axisPrecisionDayOrder = [];
+            for(var i = 1 ; i <= MONTH_NUMBER; i+=1){
+                var day = new Date(YEAR,i,0);
+                var days = [];
+                var dayFormat = day.getDate();
+                for(var d = 1; d <= dayFormat; d += 1){
+                    var dd = d.toString();
+                    if (dd.length === 1) {
+                        dd = '0' + dd;
+                    }
+                    days.push(dd);
+                }
+                axisPrecisionDayOrder.push(days);
+            }
+            return axisPrecisionDayOrder;
+        },
+        _axisPrecisionDaySection:function (sections) {
+            var currentDate = new Date();
+            var currentDateDay = currentDate.getDate();
+            //section
+            var currentDateYear = currentDate.getFullYear();
+            var currentDateMonth= currentDate.getMonth();
+            if(currentDateDay - this.options.interval >= 0){
+                var frontToDate = new Date(currentDateYear,currentDateMonth+1,currentDateDay - this.options.interval);
+                var frontToDateDay = currentDateDay - this.options.interval === 0 ? 1 : frontToDate.getDate()+1;
+                var frontToDateAllDay = new Date(currentDateYear,currentDateMonth+1,0);
+                sections = [frontToDateDay,currentDateDay];
+                this.axis.intervalDate.year  = currentDateYear;
+                this.axis.intervalDate.month = currentDateMonth+1;
+                this.axis.intervalDate.day   = frontToDateAllDay.getDate();
+            }
+            if(currentDateDay - this.options.interval < 0){
+                var _frontToDate = new Date(currentDateYear,currentDateMonth,currentDateDay - this.options.interval);
+                var frontToDay   = new Date( _frontToDate.getFullYear(),_frontToDate.getMonth()+1,0);
+                sections = [_frontToDate.getDate()+1,currentDateDay];
+                this.axis.intervalDate.year  = _frontToDate.getFullYear();
+                this.axis.intervalDate.month = _frontToDate.getMonth()+1;
+                this.axis.intervalDate.day   = frontToDay.getDate();
+                if(this.axis.intervalDate.year<currentDateYear){
+                    this.axis.intervalDate.crossYear = true;
+                    if(this.axis.intervalDate.month>currentDateMonth+1){
+                        this.axis.intervalDate.crossMonth= true;
+                    }
+                }else{
+                    if(this.axis.intervalDate.month<currentDateMonth+1){
+                        this.axis.intervalDate.crossMonth= true;
+                    }
+                }
+                
+            }
+            return sections;
+        },
+        _initAxisPrecisionDaySection:function(){
+            var precisionDaySection = {
+                section : [],
+                intervalDate:{
+                    year:0,
+                    month:0,
+                    day:0,
+                    crossYear:false,
+                    crossMonth:false
+                },
+                interval:7
+            };
+            var currentDate = new Date();
+            var currentDateDay = currentDate.getDate();
+            //section
+            var currentDateYear = currentDate.getFullYear();
+            var currentDateMonth= currentDate.getMonth();
+            if(currentDateDay - precisionDaySection.interval >= 0){
+                var frontToDate = new Date(currentDateYear,currentDateMonth+1,currentDateDay - precisionDaySection.interval);
+                var frontToDateDay = currentDateDay - precisionDaySection.interval === 0 ? 1 : frontToDate.getDate()+1;
+                var frontToDateAllDay = new Date(currentDateYear,currentDateMonth+1,0);
+                precisionDaySection.section = [frontToDateDay,currentDateDay];
+                precisionDaySection.intervalDate.year  = currentDateYear;
+                precisionDaySection.intervalDate.month = currentDateMonth+1;
+                precisionDaySection.intervalDate.day   = frontToDateAllDay.getDate();
+            }
+            if(currentDateDay - precisionDaySection.interval < 0){
+                var _frontToDate = new Date(currentDateYear,currentDateMonth,currentDateDay - precisionDaySection.interval);
+                var frontToDay   = new Date(_frontToDate.getFullYear(),_frontToDate.getMonth()+1,0);
+                precisionDaySection.section = [_frontToDate.getDate()+1,currentDateDay];
+                precisionDaySection.intervalDate.year  = _frontToDate.getFullYear();
+                precisionDaySection.intervalDate.month = _frontToDate.getMonth()+1;
+                precisionDaySection.intervalDate.day   = frontToDay.getDate();
+                if(precisionDaySection.intervalDate.year<currentDateYear){
+                    precisionDaySection.intervalDate.crossYear = true;
+                    if(precisionDaySection.intervalDate.month>currentDateMonth+1){
+                        precisionDaySection.intervalDate.crossMonth= true;
+                    }
+                }else{
+                    if(precisionDaySection.intervalDate.month<currentDateMonth+1){
+                        precisionDaySection.intervalDate.crossMonth= true;
+                    }
+                }
+            }
+            return precisionDaySection;
+        },
+        _precisionGetDaySectionAndHours:function (sections,precision) {
+            var _sections = [];
+            if(!precision.intervalDate.crossYear){
+                if(precision.intervalDate.crossMonth){
+                    var currentMonth = precision.intervalDate.month + 1;
+                    for(var i = 0 ; i < sections.length; i += 1){
+                        var s = sections[i] < 10 ? '0' + sections[i]:sections[i];
+                        if(sections[i] > precision.interval){
+                            _sections[i] = precision.intervalDate.year + '-' + (precision.intervalDate.month<10?'0'+precision.intervalDate.month:precision.intervalDate.month) + '-' + s;
+                        }else{
+                            _sections[i] = precision.intervalDate.year + '-' + (currentMonth<10?'0'+currentMonth:currentMonth) + '-' + s;
+                        }
+                    }
+                    sections = _sections;
+                }else{
+                    for(var i = 0 ; i < sections.length; i +=1){
+                        var s = sections[i] < 10 ? '0' + sections[i]:sections[i];
+                        _sections[i] = precision.intervalDate.year + '-' + (precision.intervalDate.month<10?'0'+precision.intervalDate.month:precision.intervalDate.month) + '-' + s
+                    }
+                    sections = _sections;
+                }
+            }
+            if(precision.intervalDate.crossYear){
+                var currentYear  = precision.intervalDate.year  + 1;
+                var currentMonth = 1;
+                for(var i = 0 ; i < sections.length; i += 1){
+                    var s = sections[i] < 10 ? '0' + sections[i]:sections[i];
+                    if(sections[i] > precision.interval){
+                        _sections[i] = precision.intervalDate.year + '-' + (precision.intervalDate.month<10?'0'+precision.intervalDate.month:precision.intervalDate.month) + '-' + s;
+                    }else{
+                        _sections[i] = currentYear + '-' + (currentMonth<10?'0'+currentMonth:currentMonth) + '-' + s;
+                    }
+                }
+                sections = _sections;
+            }
+            return sections;
+        },
+        _precisionDaySectionAndHours:function (sections) {
+            var _sections = [];
+            if(!this.axis.intervalDate.crossYear){
+                if(this.axis.intervalDate.crossMonth){
+                    var currentMonth = this.axis.intervalDate.month + 1;
+                    for(var i = 0 ; i < sections.length; i += 1){
+                        var s = sections[i] < 10 ? '0' + sections[i]:sections[i];
+                        if(sections[i] > this.options.interval){
+                            _sections[i] = this.axis.intervalDate.year + '-' + (this.axis.intervalDate.month<10?'0'+this.axis.intervalDate.month:this.axis.intervalDate.month) + '-' + s;
+                        }else{
+                            _sections[i] = this.axis.intervalDate.year + '-' + (currentMonth<10?'0'+currentMonth:currentMonth) + '-' + s;
+                        }
+                    }
+                    sections = _sections;
+                }else{
+                    for(var i = 0 ; i < sections.length; i +=1){
+                        var s = sections[i] < 10 ? '0' + sections[i]:sections[i];
+                        _sections[i] = this.axis.intervalDate.year + '-' + (this.axis.intervalDate.month<10?'0'+this.axis.intervalDate.month:this.axis.intervalDate.month) + '-' + s
+                    }
+                    sections = _sections;
+                }
+            }
+            if(this.axis.intervalDate.crossYear){
+                var currentYear  = this.axis.intervalDate.year  + 1;
+                var currentMonth = 1;
+                for(var i = 0 ; i < sections.length; i += 1){
+                    var s = sections[i] < 10 ? '0' + sections[i]:sections[i];
+                    if(sections[i] > this.options.interval){
+                        _sections[i] = this.axis.intervalDate.year + '-' + (this.axis.intervalDate.month<10?'0'+this.axis.intervalDate.month:this.axis.intervalDate.month) + '-' + s;
+                    }else{
+                        _sections[i] = currentYear + '-' + (currentMonth<10?'0'+currentMonth:currentMonth) + '-' + s;
+                    }
+                }
+                sections = _sections;
+            }
+            return sections;
+        },
         _axisRecord: function () {
             //year
             var sections = this._axisSectionOrder();
             var sectionsPoint = this._axisSectionPoint(sections);
+            //todo
+            //console.log(sections);
             //slice
             if(this.options.axisType === 'average' && this.options.slice > 1 && Array.isArray(this.options.slider.name)){
                 var sectionTotal = this.options.section[this.options.section.length - 1] - this.options.section[0];
@@ -764,13 +1057,25 @@
             }
             //precision average is type
             switch (this.options.precision){
-                case 'minute':
-                    var mark = ':';
-                    var precision = this._axisMinuteOrder();
+                case 'month':
+                    var mark = '-';
+                    var precision = this._axisMonthOrder();
                     var precisionPoint = this._axisPrecisionPoint(sections,sectionsPoint,precision);
                     break;
                 case 'day':
                     var mark = '-';
+                    var precision = this._axisPrecisionDayOrder();
+                    var precisionPoint = this._axisPrecisionPoint(sections,sectionsPoint,precision);
+                    break;
+                case 'hours':
+                    var mark = ' ';
+                    var precision = this._axisHoursOrder();
+                    var precisionPoint = this._axisPrecisionPoint(sections,sectionsPoint,precision);
+                    break;
+                case 'minute':
+                    var mark = ':';
+                    var precision = this._axisMinuteOrder();
+                    var precisionPoint = this._axisPrecisionPoint(sections,sectionsPoint,precision);
                     break;
                 case 'second':
                     break;
@@ -785,12 +1090,14 @@
                 //day
                 var day = this._axisDayOrder();
                 var dayPoint = this._axisDayPoint(monthPoint,day);
-                //minute
-                var minute = this._axisMinuteOrder();
-                var minutePoint = this._axisMinutePoint(dayPoint,minute);
             }
             //record core
             var axisRecord = {};
+
+            if(this.options.intervalCurrent === true && this.options.precision === 'hours'){
+                sections = this._precisionDaySectionAndHours(sections);
+                console.log(sections);
+            }
             for (var i = 0, l = sections.length; i < l; i += 1) {
                 axisRecord[sections[i]] = sectionsPoint[i] - this.options.slider.width/2;
                 if(i !== 0) {
@@ -805,10 +1112,27 @@
                 }
                 //average is precision
                 if(this.options.precision !== 'default'){
-                    if(i !== (sections.length - 1)){
+                    if(this.options.intervalCurrent !== true){
+                        if(i !== (sections.length - 1)){
+                            if(this.options.precision !== 'day'){
+                                for(var o = 0; o < precision.length; o += 1){
+                                    this.axis.recordData[precisionPoint[i][o] - this.options.slider.width/2] = sections[i].toString() + mark + precision[o];
+                                    this.axis.recordPoint.push(precisionPoint[i][o] - this.options.slider.width/2);
+                                }
+                            }else{
+                                for(var d =0;d < precision[i].length; d+=1){
+                                    this.axis.recordData[precisionPoint[i][d] - this.options.slider.width/2] = sections[i].toString() + mark + precision[i][d];
+                                    this.axis.recordPoint.push(precisionPoint[i][d] - this.options.slider.width/2);
+                                }
+                            }
+                        }
+                    } else{
+                        //hours
                         for(var o = 0; o < precision.length; o += 1){
-                            this.axis.recordData[precisionPoint[i][o] - this.options.slider.width/2] = sections[i].toString() + mark + precision[o];
-                            this.axis.recordPoint.push(precisionPoint[i][o] - this.options.slider.width/2);
+                            if(typeof precisionPoint[i][o] !== 'undefined'){
+                                this.axis.recordData[precisionPoint[i][o] - this.options.slider.width/2] = sections[i].toString() + mark + precision[o] + ':00';
+                                this.axis.recordPoint.push(precisionPoint[i][o] - this.options.slider.width/2);
+                            }
                         }
                     }
                 }
@@ -823,6 +1147,7 @@
                             for(var d = 0; d < days; d += 1){
                                 var repairDay = d < 10 ? ('-0'+d):'-'+(d+1);
                                 repairDay = d === 0 ? '': repairDay;
+                                axisRecord[sections[i] + '-' + month[m] + repairDay] = dayPoint[i][m][d];
                                 this.axis.recordData[dayPoint[i][m][d] - this.options.slider.width/2 ] = sections[i] + '-' + month[m] + repairDay;
                                 this.axis.recordPoint.push(dayPoint[i][m][d] - this.options.slider.width/2);
                             }
@@ -838,11 +1163,46 @@
         _axisPrecisionPoint:function (sections,point,order) {
             var axisPrecisionPoint = [];
             for(var i = 0;i < sections.length; i += 1){
-                if(i !== (sections.length - 1)){
-                    var precisionPoints = [];
-                    for(var j = 0; j < order.length; j += 1){
-                        var precisionPoint = point[i] + (this.axis.axisItemTicksWidth/order.length)*j + (this.axis.axisItemTicksWidth/order.length)/2;
-                        precisionPoints.push(precisionPoint);
+                var precisionPoints = [];
+                if(this.options.interval === 0 && this.options.precision !== 'hours' && this.options.intervalCurrent !== true){
+                    if (i !== (sections.length - 1)) {
+                        if (Array.isArray(order[0])) {
+                            for (var ii = 0; ii < order[i].length; ii += 1) {
+                                var precisionPoint = point[i] + (this.axis.axisItemTicksWidth / order[i].length) * ii + (this.axis.axisItemTicksWidth / order[i].length) / 2;
+                                precisionPoints.push(precisionPoint);
+                            }
+                        } else {
+                            for (var j = 0; j < order.length; j += 1) {
+                                var precisionPoint = point[i] + (this.axis.axisItemTicksWidth / order.length) * j + (this.axis.axisItemTicksWidth / order.length) / 2;
+                                precisionPoints.push(precisionPoint);
+                            }
+                        }
+                        axisPrecisionPoint.push(precisionPoints);
+                    }
+                }else{
+                    if(i === sections.length - 1){
+                        var hours = [];
+                        var date  = new Date();
+                        var currentHours = date.getHours() + 1;
+                        for(var h = 0;h <= currentHours; h +=1){
+                            if(h < 10){
+                                var hh = '0' + h.toString();
+                                hours.push(hh);
+                            }else{
+                                hours.push(h)
+                            }
+                        }
+                        order = hours;
+                    }
+                    for(var k = 0; k < order.length; k += 1){
+                        if(i !== sections.length - 1){
+                            var precisionPoint = point[i] + (this.axis.axisItemTicksWidth/order.length)*k + (this.axis.axisItemTicksWidth/order.length)/2;
+                            precisionPoints.push(precisionPoint);
+                        }else {
+                            var precisionPointLast = point[i] + ((this.axis.axisItemTicksWidth/2)/order.length)*k + ((this.axis.axisItemTicksWidth/2)/order.length)/2;
+                            precisionPoints.push(precisionPointLast);
+                        }
+
                     }
                     axisPrecisionPoint.push(precisionPoints);
                 }
@@ -854,6 +1214,7 @@
             var positions = [];
             for(var i = 0 ; i < sections.length; i += 1){
                 var point = i * this.options.axisItemWidth + this.options.axisTicks.width/2;
+                //console.log(i , this.options.axisItemWidth , this.options.axisTicks.width/2);
                 positions.push(point);
             }
             return positions;
@@ -892,19 +1253,6 @@
             }
             return axisDayPoint;
         },
-        _axisMinutePoint: function (dayPoint,minute) {
-           //todo
-           //  var axisMinutePoint = [];
-           //  for(var i = 0 ; i < dayPoint.length; i += 1){
-           //      for(var j = 0; j < dayPoint[i].length; j += 1){
-           //          for(var d = 0; d < dayPoint[i][j].length; d += 1){
-           //              for(var m = 0; m < minute; m += 1){
-           //
-           //              }
-           //          }
-           //      }
-           //  }
-        }
     };
     Timeline.Drag = function (element, options) {
         if (!(this instanceof Timeline.Drag)) {
